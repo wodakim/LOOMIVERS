@@ -94,6 +94,17 @@ canvas {
     text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
+#time-display {
+    position: absolute;
+    top: 50px;
+    right: 20px;
+    color: #fff;
+    font-size: 20px;
+    font-family: monospace;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+}
+
 #xp-bar-container {
     position: absolute;
     bottom: 0;

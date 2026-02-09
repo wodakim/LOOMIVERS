@@ -13,10 +13,19 @@ export class WaveManager {
         this.currentTime = 0;
         this.currentWaveIndex = -1;
         this.pendingSpawns = []; // Liste des ennemis à spawner {type, time}
+
+        this.timeDisplay = document.getElementById('time-display');
     }
 
     update(dt) {
         this.currentTime += dt;
+
+        // Update Timer UI
+        if (this.timeDisplay) {
+            const minutes = Math.floor(this.currentTime / 60);
+            const seconds = Math.floor(this.currentTime % 60);
+            this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
 
         // 1. Vérifier si une nouvelle vague doit démarrer
         const nextWave = WavesConfig[this.currentWaveIndex + 1];
@@ -135,6 +144,28 @@ export class WaveManager {
 
             // Le boss est élémentaire (FEU + HUILE = DANGEREUX)
             enemy.getComponent('ElementalComponent').tags.add('fire');
+
+        } else if (type === 'shooter') {
+            v.speed = 70;
+            h.current = h.max = 50;
+            s.value = 30;
+            r.color = '#ff00ff'; // Magenta
+            r.shape = 'circle'; // Distinct shape
+
+            ai.behavior = 'shooter';
+            ai.shootRange = 350;
+            ai.shootTimer = Math.random() * 2; // Random offset
+
+        } else if (type === 'charger') {
+            v.speed = 50; // Base speed slow
+            h.current = h.max = 80;
+            s.value = 40;
+            r.color = '#ffaa00'; // Orange
+            r.width = 40;
+            r.height = 40;
+
+            ai.behavior = 'charger';
+            ai.chargeTimer = 2 + Math.random();
         }
     }
 }

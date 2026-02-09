@@ -15,14 +15,16 @@ export const WavesConfig = [
     {
         time: 30, // À 30 secondes
         enemies: [
-            { type: 'tier1', count: 20, interval: 0.1 }, // Horde
-            { type: 'tier2', count: 3, interval: 1 }
+            { type: 'tier1', count: 15, interval: 0.2 },
+            { type: 'shooter', count: 5, interval: 1 }, // New Shooters
+            { type: 'charger', count: 3, interval: 2 }  // New Chargers
         ]
     },
     {
         time: 60, // À 60 secondes (Boss)
         enemies: [
-            { type: 'boss1', count: 1, interval: 0 }
+            { type: 'boss1', count: 1, interval: 0 },
+            { type: 'shooter', count: 5, interval: 2 } // Adds pressure
         ]
     }
 ];

@@ -19,19 +19,17 @@ export class DamageSystem extends System {
         const entities = this.entityManager.getEntities();
         const grid = this.physicsSystem.grid;
 
-        // 1. Détection des collisions "Trigger" (Projectiles) via le SpatialHash
-        // Pour chaque projectile actif
+        // 1. Projectiles
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('ProjectileComponent') && entity.hasComponent('ColliderComponent') && entity.hasComponent('TransformComponent')) {
                 this.checkProjectileCollision(entity, grid);
             }
 
-            // Gestion des Textes Flottants
+            // Textes Flottants
             if (entity.active && entity.hasComponent('FloatingTextComponent')) {
                 const ft = entity.getComponent('FloatingTextComponent');
                 ft.lifetime -= dt;
 
-                // Effet de montée du texte
                 if (entity.hasComponent('TransformComponent')) {
                     entity.getComponent('TransformComponent').y -= 20 * dt;
                 }
@@ -42,12 +40,12 @@ export class DamageSystem extends System {
             }
         }
 
-        // 2. Mise à jour de l'UI (Score)
+        // 2. Score UI
         if (this.scoreElement) {
              this.scoreElement.textContent = `SCORE: ${this.score.toString().padStart(5, '0')}`;
         }
 
-        // 3. Vérification globale des morts (pour les dégâts environnementaux qui ne passent pas par applyDamage)
+        // 3. Global Death Check
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('HealthComponent')) {
                 const health = entity.getComponent('HealthComponent');
@@ -67,7 +65,6 @@ export class DamageSystem extends System {
         const projectileCollider = projectileEntity.getComponent('ColliderComponent');
         const projectileData = projectileEntity.getComponent('ProjectileComponent');
 
-        // Récupération des entités dans la même case de la grille
         const col = Math.floor(projectileTransform.x / this.physicsSystem.cellSize);
         const row = Math.floor(projectileTransform.y / this.physicsSystem.cellSize);
         const key = `${col},${row}`;
@@ -76,7 +73,6 @@ export class DamageSystem extends System {
         if (!cellEntities) return;
 
         for (const target of cellEntities) {
-            // Vérifier si la cible est valide (tags)
             let isValidTarget = false;
             for (const tag of projectileCollider.tags) {
                 if (target.tags.has(tag)) {
@@ -90,64 +86,63 @@ export class DamageSystem extends System {
                 const targetTransform = target.getComponent('TransformComponent');
                 const targetCollider = target.getComponent('ColliderComponent');
 
-                // Collision Cercle-Cercle
                 const dx = projectileTransform.x - targetTransform.x;
                 const dy = projectileTransform.y - targetTransform.y;
                 const distSq = dx * dx + dy * dy;
                 const minDist = projectileCollider.radius + targetCollider.radius;
 
                 if (distSq < minDist * minDist) {
-                    // Touché !
-                    this.applyDamage(target, projectileData.damage);
+                    // Critical Hit Calculation
+                    const isCrit = Math.random() < 0.1; // 10% Chance
+                    const finalDamage = isCrit ? projectileData.damage * 2 : projectileData.damage;
 
-                    // Alchemy System Check
+                    this.applyDamage(target, finalDamage, isCrit);
+
                     if (this.alchemySystem) {
                         this.alchemySystem.onProjectileHit(projectileEntity, target);
                     }
 
-                    // Détruire le projectile
                     this.entityManager.removeEntity(projectileEntity);
-                    return; // Un projectile ne touche qu'une cible pour l'instant
+                    return;
                 }
             }
         }
     }
 
-    applyDamage(target, amount) {
+    applyDamage(target, amount, isCrit = false) {
         const health = target.getComponent('HealthComponent');
         health.current -= amount;
 
+        // Hit Flash Effect
+        if (target.hasComponent('RenderComponent')) {
+            target.getComponent('RenderComponent').hitFlashTimer = 0.1; // 100ms flash
+        }
+
         // Sound Hit
         if (this.audioSystem) {
-            // Volume bas pour les hits pour ne pas saturer
             this.audioSystem.playNoise(0.05, 0.2);
         }
 
-        // Afficher Floating Text
-        this.spawnFloatingText(target, amount);
+        // Floating Text
+        this.spawnFloatingText(target, amount, isCrit);
 
-        // Particules de sang/impact
+        // Particles
         if (this.particleSystem) {
              const t = target.getComponent('TransformComponent');
              const color = target.getComponent('RenderComponent') ? target.getComponent('RenderComponent').color : '#fff';
              this.particleSystem.emit(t.x, t.y, 5, color);
         }
 
-        // Trigger Alchemy (Explosions ?) via AlchemySystem
-        // Note: L'appelant (checkProjectileCollision) a accès au projectile, pas nous ici directement facilement.
-        // Refactoring mineur: on passe le projectile à applyDamage ou on appelle onProjectileHit avant.
-
         if (health.current <= 0 && !health.isDead) {
             health.isDead = true;
             if (this.audioSystem) {
-                // Son plus grave pour la mort
                 this.audioSystem.playTone(100, 'sawtooth', 0.1, 0.3);
             }
             this.killEntity(target);
         }
     }
 
-    spawnFloatingText(target, amount) {
+    spawnFloatingText(target, amount, isCrit) {
         const transform = target.getComponent('TransformComponent');
         const textEntity = this.entityManager.createEntity();
 
@@ -158,35 +153,29 @@ export class DamageSystem extends System {
 
         textEntity.addComponent(new FloatingTextComponent());
         const ft = textEntity.getComponent('FloatingTextComponent');
-        ft.text = amount.toString();
-        ft.color = '#fff';
+        ft.text = amount.toString() + (isCrit ? '!' : '');
+        ft.color = isCrit ? '#ff0000' : '#fff';
+        ft.isCritical = isCrit;
 
-        // Pas de RenderComponent classique, le RenderSystem devra gérer le FloatingTextComponent
-        // OU on crée un RenderComponent spécial 'text'.
-        // Pour simplifier, on modifie RenderSystem pour gérer FloatingTextComponent.
+        // Criticals last longer and float higher?
+        if (isCrit) {
+            ft.lifetime = 1.5;
+            // Maybe add velocity component for fancier float? For now stick to linear y- in update
+        }
     }
 
     killEntity(entity) {
-        // Score & Gold (Score = Gold pour simplifier ici, ou ratio 1:1)
         if (entity.hasComponent('ScoreComponent')) {
             const val = entity.getComponent('ScoreComponent').value;
             this.score += val;
-
-            // Sauvegarde de l'or (On ajoute au profil global via SaveSystem)
-            // Note: Pour les perfs, il vaut mieux le faire en fin de partie,
-            // mais ici on va le faire "à la volée" ou via GameManager lors du Game Over.
-            // Pour l'instant, on stocke juste dans le score courant.
         }
 
-        // Spawn XP Gem
         if (this.progressionSystem && entity.hasComponent('TransformComponent')) {
             const t = entity.getComponent('TransformComponent');
-            // Valeur XP dépend du score ou fixe
             const xpValue = entity.hasComponent('ScoreComponent') ? Math.ceil(entity.getComponent('ScoreComponent').value / 5) : 1;
             this.progressionSystem.spawnXPGem(t.x, t.y, xpValue);
         }
 
-        // Effet de mort (particules plus tard)
         this.entityManager.removeEntity(entity);
     }
 }

@@ -33,6 +33,7 @@ export class FloatingTextComponent extends Component {
         this.color = '#fff';
         this.lifetime = 1.0;
         this.size = 14;
+        this.isCritical = false;
     }
 
     reset() {
@@ -40,5 +41,6 @@ export class FloatingTextComponent extends Component {
         this.color = '#fff';
         this.lifetime = 1.0;
         this.size = 14;
+        this.isCritical = false;
     }
 }

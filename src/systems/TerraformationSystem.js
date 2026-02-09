@@ -33,29 +33,40 @@ export class TerraformationSystem extends System {
      * @param {number} x
      * @param {number} y
      * @param {number} radius
-     * @param {string} type - 'fire' | 'water' | 'crater'
+     * @param {string} type - 'fire' | 'water' | 'crater' | 'oil' | 'electrified_water'
      */
     addZone(x, y, radius, type) {
-        // 1. Visuel sur le Canvas
-        this.ctx.save();
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-
-        if (type === 'fire') {
-            this.ctx.fillStyle = 'rgba(255, 50, 0, 0.5)';
-        } else if (type === 'water') {
-            this.ctx.fillStyle = 'rgba(0, 50, 255, 0.5)';
-        } else if (type === 'crater') {
-            this.ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
-        } else if (type === 'oil') {
-            this.ctx.fillStyle = 'rgba(20, 20, 20, 0.7)';
-        }
-
-        this.ctx.fill();
-        this.ctx.restore();
-
         // 2. Logique (Stockage pour collisions rapides)
+        // Check duplication?
         this.zones.push({ x, y, radius, type });
+        this.redrawZones(); // Brute force redraw for POC
+    }
+
+    redrawZones() {
+        this.ctx.clearRect(0, 0, this.width, this.height);
+
+        for (const zone of this.zones) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+
+            if (zone.type === 'fire') {
+                this.ctx.fillStyle = 'rgba(255, 50, 0, 0.5)';
+            } else if (zone.type === 'water') {
+                this.ctx.fillStyle = 'rgba(0, 50, 255, 0.5)';
+            } else if (zone.type === 'crater') {
+                this.ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+            } else if (zone.type === 'oil') {
+                this.ctx.fillStyle = 'rgba(20, 20, 20, 0.7)';
+            } else if (zone.type === 'electrified_water') {
+                this.ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowColor = '#00ffff';
+            }
+
+            this.ctx.fill();
+            this.ctx.restore();
+        }
     }
 
     update(dt) {
@@ -75,6 +86,17 @@ export class TerraformationSystem extends System {
                         this.applyZoneEffect(entity, zone, dt);
                     }
                 }
+
+                // Slime Trail Logic
+                if (entity.tags.has('enemy') && entity.hasComponent('ElementalComponent')) {
+                     const elem = entity.getComponent('ElementalComponent');
+                     if (elem.tags.has('oil')) {
+                         // Chance to leave puddle
+                         if (Math.random() < 0.01) { // Low chance per frame
+                             this.addZone(t.x, t.y, 20, 'oil');
+                         }
+                     }
+                }
             }
         }
     }
@@ -90,6 +112,20 @@ export class TerraformationSystem extends System {
             }
         }
 
+        // ELECTRIFIED WATER : STUN + DAMAGE
+        if (zone.type === 'electrified_water') {
+            if (entity.hasComponent('VelocityComponent')) {
+                const v = entity.getComponent('VelocityComponent');
+                // Stun almost complete
+                v.vx *= 0.1;
+                v.vy *= 0.1;
+            }
+            if (entity.hasComponent('HealthComponent') && entity.tags.has('enemy')) {
+                 const h = entity.getComponent('HealthComponent');
+                 h.current -= 20 * dt;
+            }
+        }
+
         // Effet FEU : Dégâts (DoT)
         if (zone.type === 'fire') {
             if (entity.hasComponent('HealthComponent')) {
@@ -97,9 +133,6 @@ export class TerraformationSystem extends System {
                 if (entity.tags.has('enemy')) {
                     const health = entity.getComponent('HealthComponent');
                     health.current -= 50 * dt; // 50 DPS (significatif)
-                    // Note: La mort est gérée par DamageSystem ou ici si on veut
-                    // Pour éviter de dupliquer la logique de mort, on laisse DamageSystem faire,
-                    // mais on s'assure que health.current descend.
                 }
             }
         }

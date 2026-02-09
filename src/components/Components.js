@@ -42,6 +42,7 @@ export class RenderComponent extends Component {
         this.color = '#FFFFFF';
         this.shape = 'rect'; // 'rect' | 'circle'
         this.layer = 0;
+        this.hitFlashTimer = 0; // For juice
     }
 
     reset() {
@@ -50,6 +51,7 @@ export class RenderComponent extends Component {
         this.color = '#FFFFFF';
         this.shape = 'rect';
         this.layer = 0;
+        this.hitFlashTimer = 0;
     }
 }
 
@@ -70,12 +72,22 @@ export class AIComponent extends Component {
         this.targetId = -1; // ID de l'entité cible (ex: Joueur)
         this.state = 'idle'; // 'idle', 'chase', 'attack'
         this.detectionRadius = 300;
+        this.behavior = 'chase'; // 'chase' (default), 'shooter', 'charger'
+        this.chargeTimer = 0;
+        this.isCharging = false;
+        this.shootTimer = 0;
+        this.shootRange = 400;
     }
 
     reset() {
         this.targetId = -1;
         this.state = 'idle';
         this.detectionRadius = 300;
+        this.behavior = 'chase';
+        this.chargeTimer = 0;
+        this.isCharging = false;
+        this.shootTimer = 0;
+        this.shootRange = 400;
     }
 }
 

@@ -2,14 +2,6 @@ import { System } from '../ecs/System.js';
 import { TransformComponent, RenderComponent } from '../components/Components.js';
 
 export class RenderSystem extends System {
-    /**
-     * @param {EntityManager} entityManager
-     * @param {CanvasRenderingContext2D} ctx
-     * @param {number} width
-     * @param {number} height
-     * @param {PhysicsSystem} physicsSystem - Pour le debug draw
-     * @param {TerraformationSystem} terraformationSystem - Pour dessiner le fond
-     */
     constructor(entityManager, ctx, width, height, physicsSystem, terraformationSystem) {
         super(entityManager);
         this.ctx = ctx;
@@ -17,7 +9,7 @@ export class RenderSystem extends System {
         this.height = height;
         this.physicsSystem = physicsSystem;
         this.terraformationSystem = terraformationSystem;
-        this.debugMode = false; // Sera activé via main.js
+        this.debugMode = false;
 
         this.frameCount = 0;
         this.lastTime = performance.now();
@@ -28,9 +20,6 @@ export class RenderSystem extends System {
         this.debugMode = enabled;
     }
 
-    /**
-     * @param {number} alpha - Facteur d'interpolation.
-     */
     render(alpha) {
         // 1. Effacer l'écran
         this.ctx.fillStyle = '#111';
@@ -45,11 +34,19 @@ export class RenderSystem extends System {
 
         // 2. Filtrer et Trier par layer
         const renderables = [];
+        const texts = [];
+
         for (const entity of entities) {
-            if (entity.active && entity.hasComponent('RenderComponent') && entity.hasComponent('TransformComponent')) {
+            if (!entity.active) continue;
+
+            if (entity.hasComponent('RenderComponent') && entity.hasComponent('TransformComponent')) {
                 renderables.push(entity);
             }
+            if (entity.hasComponent('FloatingTextComponent') && entity.hasComponent('TransformComponent')) {
+                texts.push(entity);
+            }
         }
+
         renderables.sort((a, b) => {
             const ra = a.getComponent('RenderComponent');
             const rb = b.getComponent('RenderComponent');
@@ -61,17 +58,25 @@ export class RenderSystem extends System {
             const transform = entity.getComponent('TransformComponent');
             const render = entity.getComponent('RenderComponent');
 
-            this.drawPlaceholder(transform, render);
+            // Gestion du Hit Flash (White Blink)
+            if (render.hitFlashTimer > 0) {
+                render.hitFlashTimer -= 0.016; // Approx dt, render receives alpha but we need logic update for visual timer
+                // Or handle in logic system? Render system is fine for visual only state.
+                const originalColor = render.color;
+                this.ctx.save();
+                this.drawShape(transform, render, '#ffffff'); // Force white
+                this.ctx.restore();
+            } else {
+                this.ctx.save();
+                this.drawShape(transform, render, render.color);
+                this.ctx.restore();
+            }
         }
 
-        // 3b. Dessiner les textes flottants (UI World Space)
-        this.drawFloatingTexts(entities);
+        // 3b. Dessiner les textes flottants
+        this.drawFloatingTexts(texts);
 
-        // 3c. Particles (si gérées via RenderComponent, elles sont déjà dessinées en étape 3)
-        // Mais si on veut un effet spécial (additive blending), on le fait ici ou via un flag sur RenderComponent.
-        // Pour l'instant, étape 3 suffit.
-
-        // 4. Debug Draw (Grille Spatiale)
+        // 4. Debug Draw
         if (this.debugMode && this.physicsSystem) {
             this.physicsSystem.drawDebug(this.ctx);
         }
@@ -80,21 +85,14 @@ export class RenderSystem extends System {
         this.drawFPS();
     }
 
-    drawPlaceholder(transform, render, entity) {
-        this.ctx.save();
+    drawShape(transform, render, color) {
         this.ctx.translate(transform.x, transform.y);
         this.ctx.rotate(transform.rotation);
 
         // Effet "Glow"
         this.ctx.shadowBlur = 15;
-        this.ctx.shadowColor = render.color;
-        this.ctx.fillStyle = render.color;
-
-        // Hack pour les particules qui fade out
-        if (entity && entity.hasComponent('ParticleComponent')) {
-            const p = entity.getComponent('ParticleComponent');
-            this.ctx.globalAlpha = p.lifetime / p.maxLifetime;
-        }
+        this.ctx.shadowColor = color;
+        this.ctx.fillStyle = color;
 
         if (render.shape === 'rect') {
             this.ctx.fillRect(-render.width / 2, -render.height / 2, render.width, render.height);
@@ -103,29 +101,30 @@ export class RenderSystem extends System {
             this.ctx.arc(0, 0, render.width / 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
-
-        this.ctx.restore();
     }
 
     drawFloatingTexts(entities) {
         this.ctx.save();
-        this.ctx.font = 'bold 14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillStyle = '#ffffff';
         this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 3;
 
         for (const entity of entities) {
-            if (entity.active && entity.hasComponent('FloatingTextComponent') && entity.hasComponent('TransformComponent')) {
-                const transform = entity.getComponent('TransformComponent');
-                const ft = entity.getComponent('FloatingTextComponent');
+            const transform = entity.getComponent('TransformComponent');
+            const ft = entity.getComponent('FloatingTextComponent');
 
-                // Petit effet de fade out
-                this.ctx.globalAlpha = Math.max(0, ft.lifetime);
+            this.ctx.globalAlpha = Math.max(0, ft.lifetime);
 
-                this.ctx.strokeText(ft.text, transform.x, transform.y);
-                this.ctx.fillText(ft.text, transform.x, transform.y);
+            if (ft.isCritical) {
+                this.ctx.font = 'bold 24px Arial'; // Plus gros
+                this.ctx.fillStyle = '#ff0000';    // Rouge vif
+            } else {
+                this.ctx.font = 'bold 14px Arial';
+                this.ctx.fillStyle = '#ffffff';
             }
+
+            this.ctx.strokeText(ft.text, transform.x, transform.y);
+            this.ctx.fillText(ft.text, transform.x, transform.y);
         }
         this.ctx.restore();
     }
