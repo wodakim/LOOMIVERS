@@ -69,11 +69,14 @@ class Game {
 
         // Initialisation des Systèmes
         // Ordre CRITIQUE : Input -> Logic -> Physics -> Render
+        // Note: On instancie PhysicsSystem tôt pour l'injecter dans l'IA (Separation/Flocking)
+        this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
+
         this.inputSystem = new InputSystem(this.entityManager, this.inputHandler);
-        this.aiSystem = new AISystem(this.entityManager);
+        this.aiSystem = new AISystem(this.entityManager, this.physicsSystem); // Injection Physics pour grid neighbor search
         this.combatSystem = new CombatSystem(this.entityManager);
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
-        this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
+        // this.physicsSystem déjà instancié plus haut
         this.particleSystem = new ParticleSystem(this.entityManager);
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem);
