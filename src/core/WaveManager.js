@@ -1,5 +1,6 @@
 import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent } from '../components/Components.js';
 import { HealthComponent, ScoreComponent } from '../components/StatsComponents.js';
+import { ElementalComponent } from '../components/ElementalComponents.js';
 import { WavesConfig } from '../data/WavesConfig.js';
 
 export class WaveManager {
@@ -96,12 +97,22 @@ export class WaveManager {
         r.height = 32;
         r.layer = 5;
 
+        // Elemental (Default none)
+        enemy.addComponent(new ElementalComponent());
+
         // Config selon le Type
         if (type === 'tier1') {
             v.speed = 80 + Math.random() * 40;
             h.current = h.max = 30;
             s.value = 10;
             r.color = '#ff3333'; // Rouge
+
+            // 50% de chance d'être "HUILEUX" (Noir/Violet foncé)
+            if (Math.random() > 0.5) {
+                enemy.getComponent('ElementalComponent').tags.add('oil');
+                r.color = '#440044';
+            }
+
         } else if (type === 'tier2') {
             v.speed = 60;
             h.current = h.max = 100;

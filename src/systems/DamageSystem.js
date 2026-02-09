@@ -4,10 +4,12 @@ import { HealthComponent, FloatingTextComponent, ScoreComponent } from '../compo
 import { ProjectileComponent } from '../components/WeaponComponents.js';
 
 export class DamageSystem extends System {
-    constructor(entityManager, physicsSystem, particleSystem) {
+    constructor(entityManager, physicsSystem, particleSystem, progressionSystem, alchemySystem) {
         super(entityManager);
         this.physicsSystem = physicsSystem;
         this.particleSystem = particleSystem;
+        this.progressionSystem = progressionSystem;
+        this.alchemySystem = alchemySystem;
         this.scoreElement = document.getElementById('score-display');
         this.score = 0;
     }
@@ -105,6 +107,10 @@ export class DamageSystem extends System {
              this.particleSystem.emit(t.x, t.y, 5, color);
         }
 
+        // Trigger Alchemy (Explosions ?) via AlchemySystem
+        // Note: L'appelant (checkProjectileCollision) a accès au projectile, pas nous ici directement facilement.
+        // Refactoring mineur: on passe le projectile à applyDamage ou on appelle onProjectileHit avant.
+
         if (health.current <= 0 && !health.isDead) {
             health.isDead = true;
             this.killEntity(target);
@@ -134,6 +140,14 @@ export class DamageSystem extends System {
         // Score
         if (entity.hasComponent('ScoreComponent')) {
             this.score += entity.getComponent('ScoreComponent').value;
+        }
+
+        // Spawn XP Gem
+        if (this.progressionSystem && entity.hasComponent('TransformComponent')) {
+            const t = entity.getComponent('TransformComponent');
+            // Valeur XP dépend du score ou fixe
+            const xpValue = entity.hasComponent('ScoreComponent') ? Math.ceil(entity.getComponent('ScoreComponent').value / 5) : 1;
+            this.progressionSystem.spawnXPGem(t.x, t.y, xpValue);
         }
 
         // Effet de mort (particules plus tard)

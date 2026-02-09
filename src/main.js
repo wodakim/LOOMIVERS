@@ -24,9 +24,14 @@ import { RenderSystem } from './systems/RenderSystem.js';
 import { SEOSystem } from './systems/SEOSystem.js';
 import { TerraformationSystem } from './systems/TerraformationSystem.js';
 import { ParticleSystem } from './systems/ParticleSystem.js';
+import { ProgressionSystem } from './systems/ProgressionSystem.js';
+import { AlchemySystem } from './systems/AlchemySystem.js';
 import { WeaponComponent } from './components/WeaponComponents.js';
 import { HealthComponent, ScoreComponent } from './components/StatsComponents.js';
+import { LevelComponent } from './components/ProgressionComponents.js';
+import { ElementalComponent } from './components/ElementalComponents.js';
 import { WaveManager } from './core/WaveManager.js';
+import { GameManager, GameState } from './core/GameManager.js';
 
 /**
  * Point d'entrée principal du moteur Genesis Survivor.
@@ -40,6 +45,13 @@ class Game {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
+        // Game Manager (State Machine)
+        this.gameManager = new GameManager(this);
+
+        this.initEngine();
+    }
+
+    initEngine() {
         // Initialisation des cœurs
         this.entityManager = new EntityManager();
         this.inputHandler = new InputHandler();
@@ -59,8 +71,10 @@ class Game {
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.particleSystem = new ParticleSystem(this.entityManager);
-        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem); // Injection ParticleSystem
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
+        this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem);
+        this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem);
+        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem); // Injection Alchemy
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.seoSystem = new SEOSystem(this.entityManager);
 
@@ -71,6 +85,8 @@ class Game {
         this.entityManager.registerSystem(this.physicsSystem);
         this.entityManager.registerSystem(this.particleSystem);
         this.entityManager.registerSystem(this.damageSystem);
+        this.entityManager.registerSystem(this.progressionSystem);
+        this.entityManager.registerSystem(this.alchemySystem);
         this.entityManager.registerSystem(this.terraformationSystem);
 
         // Demo Terraformation : Ajouter des zones initiales
@@ -87,10 +103,23 @@ class Game {
             (alpha) => this.render(alpha)
         );
 
+        console.log('Genesis Survivor Engine (GSE-v1) initialized. Waiting for start.');
+    }
+
+    start() {
         this.initWorld();
         this.gameLoop.start();
+    }
 
-        console.log('Genesis Survivor Engine (GSE-v1) initialized.');
+    stop() {
+        this.gameLoop.stop();
+    }
+
+    reset() {
+        this.stop();
+        // TODO: Clean up all entities properly via EntityManager.clear() or creating new instance
+        // Pour la POC : On recrée tout l'engine pour être sûr
+        this.initEngine();
     }
 
     resize() {
@@ -135,6 +164,10 @@ class Game {
         weapon.damage = 25;
         weapon.range = 400;
 
+        // Le Héro tire du FEU
+        hero.addComponent(new ElementalComponent());
+        hero.getComponent('ElementalComponent').tags.add('fire');
+
         hero.addComponent(new ColliderComponent());
         const c = hero.getComponent('ColliderComponent');
         c.radius = 20;
@@ -142,6 +175,8 @@ class Game {
 
         hero.addComponent(new HealthComponent());
         hero.getComponent('HealthComponent').current = 1000; // Le héros est tanky
+
+        hero.addComponent(new LevelComponent()); // Pour l'XP
 
         hero.addComponent(new RenderComponent());
         const r = hero.getComponent('RenderComponent');
@@ -156,6 +191,8 @@ class Game {
     // (spawnEnemy déplacé dans WaveManager)
 
     update(dt) {
+        if (this.gameManager.state !== GameState.PLAYING) return;
+
         // Mise à jour du Wave Manager
         this.waveManager.update(dt);
 
@@ -164,6 +201,15 @@ class Game {
 
         // Mise à jour SEO (Throttled)
         this.seoSystem.update(dt);
+
+        // Check Game Over Condition (Hero Dead)
+        const hero = this.entityManager.getEntities().find(e => e.tags.has('player'));
+        if (!hero || !hero.active) {
+            // Le DamageSystem a déjà tué l'entité si HP <= 0
+            // On récupère le score avant de finir
+            const score = this.damageSystem.score;
+            this.gameManager.triggerGameOver(score);
+        }
     }
 
     render(alpha) {

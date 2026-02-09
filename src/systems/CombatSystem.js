@@ -1,6 +1,7 @@
 import { System } from '../ecs/System.js';
 import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent } from '../components/Components.js';
 import { WeaponComponent, ProjectileComponent } from '../components/WeaponComponents.js';
+import { ElementalComponent } from '../components/ElementalComponents.js';
 
 export class CombatSystem extends System {
     constructor(entityManager) {
@@ -109,6 +110,15 @@ export class CombatSystem extends System {
         p.damage = weapon.damage;
         p.sourceId = source.id;
         p.lifetime = weapon.range / weapon.projectileSpeed; // Durée de vie basée sur la portée
+
+        // Elemental Transfer (Source -> Projectile)
+        if (source.hasComponent('ElementalComponent')) {
+            projectile.addComponent(new ElementalComponent());
+            const sourceElem = source.getComponent('ElementalComponent');
+            const projElem = projectile.getComponent('ElementalComponent');
+            // Clone tags
+            for (const tag of sourceElem.tags) projElem.tags.add(tag);
+        }
 
         // Collider (Trigger)
         projectile.addComponent(new ColliderComponent());

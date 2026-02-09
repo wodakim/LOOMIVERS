@@ -21,11 +21,14 @@ Le moteur repose sur une architecture **ECS (Entity Component System)** stricte 
 *   **Spatial Hash Grid :** Système de détection de collision optimisé (O(1) en moyenne) pour gérer des milliers d'entités.
 *   **Debug Mode :** Visualisation de la grille spatiale et des hitbox pour le débogage.
 
-### 4. GAMEPLAY & FEATURES
+### 4. GAMEPLAY & FEATURES (Phase 3)
+*   **Game State :** Machine à états (MENU, PLAY, GAMEOVER) gérée par `GameManager`.
 *   **Combat System :** Tir automatique sur l'ennemi le plus proche avec gestion de cooldown.
+*   **Elemental Alchemy :** Réactions élémentaires (Feu + Huile = Explosion) gérées par `AlchemySystem`.
+*   **XP & Level Up :** Système de progression avec gemmes d'XP magnétiques et niveaux.
 *   **Wave Manager :** Système de script pour faire apparaître des vagues d'ennemis progressives (`WavesConfig.js`).
 *   **Terraformation :** Gestion d'effets environnementaux persistants (Feu, Eau) via un canvas séparé.
-*   **Particles :** Système de particules simple pour le feedback visuel (impacts, sang).
+*   **Particles :** Système de particules simple pour le feedback visuel (impacts, sang, explosions).
 *   **Damage & Stats :** Gestion des PV, Dégâts, Score et Textes flottants.
 
 ### 5. SÉCURITÉ (ANTI-CHEAT)
@@ -37,10 +40,10 @@ Le moteur repose sur une architecture **ECS (Entity Component System)** stricte 
 *   **DOM Throttling :** Mise à jour asynchrone (toutes les 2s ou via `requestIdleCallback`) d'une description textuelle invisible du jeu pour les moteurs de recherche et lecteurs d'écran.
 
 ## STRUCTURE DES DOSSIERS
-*   `/src/core` : Cœur du moteur (Loop, Input, Save, Pool, WaveManager).
+*   `/src/core` : Cœur du moteur (Loop, Input, Save, Pool, WaveManager, GameManager).
 *   `/src/ecs` : Classes de base ECS (Entity, Component, System, Manager).
-*   `/src/systems` : Logique métier (Mouvement, Rendu, Collision, IA, Combat, Damage, Particle, Terraformation).
-*   `/src/components` : Données (Position, Vitesse, Stats, Weapon, Particle).
+*   `/src/systems` : Logique métier (Mouvement, Rendu, Collision, IA, Combat, Damage, Particle, Terraformation, Progression, Alchemy).
+*   `/src/components` : Données (Position, Vitesse, Stats, Weapon, Particle, Progression, Elemental).
 *   `/src/data` : Configuration (WavesConfig).
 *   `/assets` : Ressources graphiques et sonores (Placeholders pour l'instant).
 

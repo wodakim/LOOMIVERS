@@ -36,9 +36,29 @@
 
         <!-- UI Overlay (HTML/CSS) -->
         <div id="ui-layer">
+
+            <!-- Ecrans de jeu -->
+            <div id="menu-screen" class="screen">
+                <h1>GENESIS SURVIVOR</h1>
+                <button id="start-btn" class="btn">START GAME</button>
+            </div>
+
+            <div id="gameover-screen" class="screen hidden">
+                <h1>GAME OVER</h1>
+                <p>FINAL SCORE: <span id="final-score">0</span></p>
+                <button id="restart-btn" class="btn">TRY AGAIN</button>
+            </div>
+
+            <!-- HUD (Visible uniquement en jeu, géré par CSS si on veut, ou JS) -->
             <div id="health-bar-container">
                 <div id="health-bar"></div>
             </div>
+
+            <div id="xp-bar-container">
+                <div id="xp-fill"></div>
+                <div id="level-display">LVL 1</div>
+            </div>
+
             <div id="score-display">SCORE: 00000</div>
         </div>
 
