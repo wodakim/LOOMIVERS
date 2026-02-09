@@ -17,9 +17,16 @@ import {
 import { InputSystem } from './systems/InputSystem.js';
 import { MovementSystem } from './systems/MovementSystem.js';
 import { PhysicsSystem } from './systems/PhysicsSystem.js';
+import { CombatSystem } from './systems/CombatSystem.js';
+import { DamageSystem } from './systems/DamageSystem.js';
 import { AISystem } from './systems/AISystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
 import { SEOSystem } from './systems/SEOSystem.js';
+import { TerraformationSystem } from './systems/TerraformationSystem.js';
+import { ParticleSystem } from './systems/ParticleSystem.js';
+import { WeaponComponent } from './components/WeaponComponents.js';
+import { HealthComponent, ScoreComponent } from './components/StatsComponents.js';
+import { WaveManager } from './core/WaveManager.js';
 
 /**
  * Point d'entrée principal du moteur Genesis Survivor.
@@ -41,20 +48,34 @@ class Game {
         // Sécurité : Initialisation du système de sauvegarde (Key generation)
         this.saveSystem.initIntegritySalt();
 
+        // Wave Manager (Director)
+        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
+
         // Initialisation des Systèmes
         // Ordre CRITIQUE : Input -> Logic -> Physics -> Render
         this.inputSystem = new InputSystem(this.entityManager, this.inputHandler);
         this.aiSystem = new AISystem(this.entityManager);
+        this.combatSystem = new CombatSystem(this.entityManager);
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
-        this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem);
+        this.particleSystem = new ParticleSystem(this.entityManager);
+        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem); // Injection ParticleSystem
+        this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
+        this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.seoSystem = new SEOSystem(this.entityManager);
 
         this.entityManager.registerSystem(this.inputSystem);
         this.entityManager.registerSystem(this.aiSystem);
+        this.entityManager.registerSystem(this.combatSystem);
         this.entityManager.registerSystem(this.movementSystem);
         this.entityManager.registerSystem(this.physicsSystem);
-        // RenderSystem et SEOSystem sont appelés manuellement dans la boucle de rendu pour séparer update/draw
+        this.entityManager.registerSystem(this.particleSystem);
+        this.entityManager.registerSystem(this.damageSystem);
+        this.entityManager.registerSystem(this.terraformationSystem);
+
+        // Demo Terraformation : Ajouter des zones initiales
+        this.terraformationSystem.addZone(200, 200, 100, 'water');
+        this.terraformationSystem.addZone(600, 400, 80, 'fire');
 
         // Configuration
         this.debugMode = true;
@@ -107,10 +128,20 @@ class Game {
 
         hero.addComponent(new InputComponent());
 
+        // Ajout de l'arme par défaut
+        hero.addComponent(new WeaponComponent());
+        const weapon = hero.getComponent('WeaponComponent');
+        weapon.fireRate = 2; // 2 tirs/sec
+        weapon.damage = 25;
+        weapon.range = 400;
+
         hero.addComponent(new ColliderComponent());
         const c = hero.getComponent('ColliderComponent');
         c.radius = 20;
         c.tags = ['player'];
+
+        hero.addComponent(new HealthComponent());
+        hero.getComponent('HealthComponent').current = 1000; // Le héros est tanky
 
         hero.addComponent(new RenderComponent());
         const r = hero.getComponent('RenderComponent');
@@ -120,45 +151,14 @@ class Game {
         r.height = 40;
         r.layer = 10;
 
-        // 2. Création des Ennemis (Carrés Rouges)
-        for (let i = 0; i < 5; i++) {
-            this.spawnEnemy(i);
-        }
     }
 
-    spawnEnemy(index) {
-        const enemy = this.entityManager.createEntity();
-        enemy.tags.add('enemy');
-
-        enemy.addComponent(new TransformComponent());
-        const t = enemy.getComponent('TransformComponent');
-        // Position aléatoire autour du joueur
-        t.x = Math.random() * this.canvas.width;
-        t.y = Math.random() * this.canvas.height;
-
-        enemy.addComponent(new VelocityComponent());
-        const v = enemy.getComponent('VelocityComponent');
-        v.speed = 100 + Math.random() * 50; // Vitesse variable
-
-        enemy.addComponent(new AIComponent());
-        const ai = enemy.getComponent('AIComponent');
-        ai.detectionRadius = 500;
-
-        enemy.addComponent(new ColliderComponent());
-        const c = enemy.getComponent('ColliderComponent');
-        c.radius = 16;
-        c.tags = ['enemy'];
-
-        enemy.addComponent(new RenderComponent());
-        const r = enemy.getComponent('RenderComponent');
-        r.color = '#ff3333'; // Rouge
-        r.shape = 'rect'; // Le prompt demandait "carrés rouges"
-        r.width = 32;
-        r.height = 32;
-        r.layer = 5;
-    }
+    // (spawnEnemy déplacé dans WaveManager)
 
     update(dt) {
+        // Mise à jour du Wave Manager
+        this.waveManager.update(dt);
+
         // Mise à jour de la logique (Pas de temps fixe)
         this.entityManager.update(dt);
 

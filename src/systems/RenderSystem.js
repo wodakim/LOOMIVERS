@@ -8,13 +8,15 @@ export class RenderSystem extends System {
      * @param {number} width
      * @param {number} height
      * @param {PhysicsSystem} physicsSystem - Pour le debug draw
+     * @param {TerraformationSystem} terraformationSystem - Pour dessiner le fond
      */
-    constructor(entityManager, ctx, width, height, physicsSystem) {
+    constructor(entityManager, ctx, width, height, physicsSystem, terraformationSystem) {
         super(entityManager);
         this.ctx = ctx;
         this.width = width;
         this.height = height;
         this.physicsSystem = physicsSystem;
+        this.terraformationSystem = terraformationSystem;
         this.debugMode = false; // Sera activé via main.js
 
         this.frameCount = 0;
@@ -33,6 +35,11 @@ export class RenderSystem extends System {
         // 1. Effacer l'écran
         this.ctx.fillStyle = '#111';
         this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // 1b. Dessiner le Terrain (Background)
+        if (this.terraformationSystem) {
+            this.terraformationSystem.renderTerrain(this.ctx);
+        }
 
         const entities = this.entityManager.getEntities();
 
@@ -57,6 +64,13 @@ export class RenderSystem extends System {
             this.drawPlaceholder(transform, render);
         }
 
+        // 3b. Dessiner les textes flottants (UI World Space)
+        this.drawFloatingTexts(entities);
+
+        // 3c. Particles (si gérées via RenderComponent, elles sont déjà dessinées en étape 3)
+        // Mais si on veut un effet spécial (additive blending), on le fait ici ou via un flag sur RenderComponent.
+        // Pour l'instant, étape 3 suffit.
+
         // 4. Debug Draw (Grille Spatiale)
         if (this.debugMode && this.physicsSystem) {
             this.physicsSystem.drawDebug(this.ctx);
@@ -66,7 +80,7 @@ export class RenderSystem extends System {
         this.drawFPS();
     }
 
-    drawPlaceholder(transform, render) {
+    drawPlaceholder(transform, render, entity) {
         this.ctx.save();
         this.ctx.translate(transform.x, transform.y);
         this.ctx.rotate(transform.rotation);
@@ -76,6 +90,12 @@ export class RenderSystem extends System {
         this.ctx.shadowColor = render.color;
         this.ctx.fillStyle = render.color;
 
+        // Hack pour les particules qui fade out
+        if (entity && entity.hasComponent('ParticleComponent')) {
+            const p = entity.getComponent('ParticleComponent');
+            this.ctx.globalAlpha = p.lifetime / p.maxLifetime;
+        }
+
         if (render.shape === 'rect') {
             this.ctx.fillRect(-render.width / 2, -render.height / 2, render.width, render.height);
         } else if (render.shape === 'circle') {
@@ -84,6 +104,29 @@ export class RenderSystem extends System {
             this.ctx.fill();
         }
 
+        this.ctx.restore();
+    }
+
+    drawFloatingTexts(entities) {
+        this.ctx.save();
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 2;
+
+        for (const entity of entities) {
+            if (entity.active && entity.hasComponent('FloatingTextComponent') && entity.hasComponent('TransformComponent')) {
+                const transform = entity.getComponent('TransformComponent');
+                const ft = entity.getComponent('FloatingTextComponent');
+
+                // Petit effet de fade out
+                this.ctx.globalAlpha = Math.max(0, ft.lifetime);
+
+                this.ctx.strokeText(ft.text, transform.x, transform.y);
+                this.ctx.fillText(ft.text, transform.x, transform.y);
+            }
+        }
         this.ctx.restore();
     }
 
