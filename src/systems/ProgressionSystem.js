@@ -5,9 +5,10 @@ import { WeaponComponent } from '../components/WeaponComponents.js';
 import { HealthComponent } from '../components/StatsComponents.js';
 
 export class ProgressionSystem extends System {
-    constructor(entityManager, physicsSystem) {
+    constructor(entityManager, physicsSystem, audioSystem) {
         super(entityManager);
         this.physicsSystem = physicsSystem;
+        this.audioSystem = audioSystem;
         this.uiXPBar = document.getElementById('xp-fill'); // À créer dans HTML
         this.uiLevel = document.getElementById('level-display'); // À créer
         this.levelUpOverlay = document.getElementById('levelup-overlay'); // À créer
@@ -90,6 +91,10 @@ export class ProgressionSystem extends System {
     }
 
     triggerLevelUp(player, level) {
+        if (this.audioSystem) {
+            this.audioSystem.playLevelUp();
+        }
+
         level.currentXP -= level.nextLevelXP;
         level.level++;
         level.nextLevelXP = Math.floor(level.nextLevelXP * 1.5);

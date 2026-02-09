@@ -4,12 +4,13 @@ import { HealthComponent, FloatingTextComponent, ScoreComponent } from '../compo
 import { ProjectileComponent } from '../components/WeaponComponents.js';
 
 export class DamageSystem extends System {
-    constructor(entityManager, physicsSystem, particleSystem, progressionSystem, alchemySystem) {
+    constructor(entityManager, physicsSystem, particleSystem, progressionSystem, alchemySystem, audioSystem) {
         super(entityManager);
         this.physicsSystem = physicsSystem;
         this.particleSystem = particleSystem;
         this.progressionSystem = progressionSystem;
         this.alchemySystem = alchemySystem;
+        this.audioSystem = audioSystem;
         this.scoreElement = document.getElementById('score-display');
         this.score = 0;
     }
@@ -44,6 +45,20 @@ export class DamageSystem extends System {
         // 2. Mise à jour de l'UI (Score)
         if (this.scoreElement) {
              this.scoreElement.textContent = `SCORE: ${this.score.toString().padStart(5, '0')}`;
+        }
+
+        // 3. Vérification globale des morts (pour les dégâts environnementaux qui ne passent pas par applyDamage)
+        for (const entity of entities) {
+            if (entity.active && entity.hasComponent('HealthComponent')) {
+                const health = entity.getComponent('HealthComponent');
+                if (health.current <= 0 && !health.isDead) {
+                    health.isDead = true;
+                    if (this.audioSystem) {
+                         this.audioSystem.playTone(100, 'sawtooth', 0.1, 0.3);
+                    }
+                    this.killEntity(entity);
+                }
+            }
         }
     }
 
@@ -102,6 +117,12 @@ export class DamageSystem extends System {
         const health = target.getComponent('HealthComponent');
         health.current -= amount;
 
+        // Sound Hit
+        if (this.audioSystem) {
+            // Volume bas pour les hits pour ne pas saturer
+            this.audioSystem.playNoise(0.05, 0.2);
+        }
+
         // Afficher Floating Text
         this.spawnFloatingText(target, amount);
 
@@ -118,6 +139,10 @@ export class DamageSystem extends System {
 
         if (health.current <= 0 && !health.isDead) {
             health.isDead = true;
+            if (this.audioSystem) {
+                // Son plus grave pour la mort
+                this.audioSystem.playTone(100, 'sawtooth', 0.1, 0.3);
+            }
             this.killEntity(target);
         }
     }

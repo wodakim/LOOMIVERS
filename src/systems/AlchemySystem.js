@@ -5,10 +5,11 @@ import { ProjectileComponent } from '../components/WeaponComponents.js';
 import { HealthComponent } from '../components/StatsComponents.js';
 
 export class AlchemySystem extends System {
-    constructor(entityManager, terraformationSystem, particleSystem) {
+    constructor(entityManager, terraformationSystem, particleSystem, audioSystem) {
         super(entityManager);
         this.terraformationSystem = terraformationSystem; // Pour lire les zones
         this.particleSystem = particleSystem;
+        this.audioSystem = audioSystem;
     }
 
     update(dt) {
@@ -59,6 +60,10 @@ export class AlchemySystem extends System {
 
     triggerExplosion(transform) {
         console.log("ALCHEMY: EXPLOSION!");
+
+        if (this.audioSystem) {
+            this.audioSystem.playExplosion();
+        }
 
         // 1. Visuel
         this.particleSystem.emit(transform.x, transform.y, 20, '#ffaa00', 200);

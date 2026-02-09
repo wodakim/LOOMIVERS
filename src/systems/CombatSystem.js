@@ -4,8 +4,9 @@ import { WeaponComponent, ProjectileComponent } from '../components/WeaponCompon
 import { ElementalComponent } from '../components/ElementalComponents.js';
 
 export class CombatSystem extends System {
-    constructor(entityManager) {
+    constructor(entityManager, audioSystem) {
         super(entityManager);
+        this.audioSystem = audioSystem;
     }
 
     update(dt) {
@@ -80,6 +81,10 @@ export class CombatSystem extends System {
         this.spawnMeleeHitbox(entity, weapon, 50, 0); // Offset X
         this.spawnMeleeHitbox(entity, weapon, -50, 0); // Offset X (Double whip!)
         weapon.cooldown = 1 / weapon.fireRate;
+
+        if (entity.tags.has('player') && this.audioSystem) {
+            this.audioSystem.playNoise(0.1, 0.3); // Woosh effect
+        }
     }
 
     handleAura(entity, weapon) {
@@ -89,6 +94,9 @@ export class CombatSystem extends System {
         // For this ECS, spawning a short-lived pulse is easier to manage without parent-child hierarchy.
         this.spawnAreaHitbox(entity, weapon);
         weapon.cooldown = 1 / weapon.fireRate;
+
+        // Aura sound is annoying if played every tick (fireRate is high).
+        // Maybe skipping it or playing very low.
     }
 
     spawnMeleeHitbox(source, weapon, offsetX, offsetY) {
@@ -176,6 +184,10 @@ export class CombatSystem extends System {
     fireProjectile(source, target, weapon) {
         const sourceTransform = source.getComponent('TransformComponent');
         const targetTransform = target.getComponent('TransformComponent');
+
+        if (source.tags.has('player') && this.audioSystem) {
+            this.audioSystem.playShoot();
+        }
 
         // Création du projectile via l'EntityManager (qui utilise le Pool)
         const projectile = this.entityManager.createEntity();

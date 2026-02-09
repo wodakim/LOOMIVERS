@@ -137,6 +137,10 @@ export class GameManager {
         this.game.saveSystem.save(data);
         console.log(`Game Over. Score: ${score}. Earned ${goldEarned} Gold. Total: ${data.gold}`);
 
+        if (this.game.audioSystem) {
+            this.game.audioSystem.playGameOver();
+        }
+
         this.showScreen(this.gameOverScreen);
         this.game.stop();
     }

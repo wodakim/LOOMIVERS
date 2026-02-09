@@ -2,6 +2,7 @@ import { GameLoop } from './core/GameLoop.js';
 import { EntityManager } from './ecs/EntityManager.js';
 import { InputHandler } from './core/InputHandler.js';
 import { SaveSystem } from './core/SaveSystem.js';
+import { AudioSystem } from './core/AudioSystem.js';
 
 // Components
 import {
@@ -51,6 +52,7 @@ class Game {
         this.saveSystem = new SaveSystem();
         this.saveSystem.initIntegritySalt();
         this.upgradeManager = new UpgradeManager(this.saveSystem);
+        this.audioSystem = new AudioSystem();
 
         // Game Manager (State Machine)
         this.gameManager = new GameManager(this);
@@ -74,14 +76,14 @@ class Game {
 
         this.inputSystem = new InputSystem(this.entityManager, this.inputHandler);
         this.aiSystem = new AISystem(this.entityManager, this.physicsSystem); // Injection Physics pour grid neighbor search
-        this.combatSystem = new CombatSystem(this.entityManager);
+        this.combatSystem = new CombatSystem(this.entityManager, this.audioSystem); // Injection Audio
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
         // this.physicsSystem déjà instancié plus haut
         this.particleSystem = new ParticleSystem(this.entityManager);
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
-        this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem);
-        this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem);
-        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem); // Injection Alchemy
+        this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem, this.audioSystem); // Injection Audio
+        this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem); // Injection Audio
+        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem, this.audioSystem); // Injection Audio
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.seoSystem = new SEOSystem(this.entityManager);
 
@@ -115,6 +117,9 @@ class Game {
     }
 
     start() {
+        // Resume Audio Context on user interaction (Start Game)
+        this.audioSystem.init();
+
         this.initWorld();
         // Appliquer les upgrades permanentes au joueur
         const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
