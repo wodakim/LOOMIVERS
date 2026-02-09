@@ -1,6 +1,6 @@
 import { System } from '../ecs/System.js';
 import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent } from '../components/Components.js';
-import { WeaponComponent, ProjectileComponent } from '../components/WeaponComponents.js';
+import { WeaponComponent, ProjectileComponent, OrbitalComponent } from '../components/WeaponComponents.js';
 import { ElementalComponent } from '../components/ElementalComponents.js';
 
 export class CombatSystem extends System {
@@ -19,15 +19,44 @@ export class CombatSystem extends System {
             }
         }
 
-        // 2. Gestion des Projectiles (Durée de vie)
+        // 2. Gestion des Projectiles (Durée de vie et Comportements spéciaux)
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('ProjectileComponent')) {
                 const projectile = entity.getComponent('ProjectileComponent');
                 projectile.lifetime -= dt;
+
+                // Orbital Logic
+                if (projectile.isOrbital && entity.hasComponent('OrbitalComponent')) {
+                    this.updateOrbital(entity, dt);
+                }
+
                 if (projectile.lifetime <= 0) {
+                    // Mine Explosion on timeout? Or just disappear?
+                    // Let's say mines explode on timeout too for safety
+                    if (projectile.isMine && entity.hasComponent('TransformComponent')) {
+                        // Trigger AOE (handled in DamageSystem usually, but here we can force it via simple collider check or just remove)
+                        // Removing for now to keep it simple, mines trigger on collision.
+                    }
                     this.entityManager.removeEntity(entity);
                 }
             }
+        }
+    }
+
+    updateOrbital(entity, dt) {
+        const orbital = entity.getComponent('OrbitalComponent');
+        const parent = this.entityManager.getEntities().find(e => e.id === orbital.parentId);
+
+        if (parent && parent.active && parent.hasComponent('TransformComponent')) {
+            const pt = parent.getComponent('TransformComponent');
+            const t = entity.getComponent('TransformComponent');
+
+            orbital.angle += orbital.speed * dt;
+            t.x = pt.x + Math.cos(orbital.angle) * orbital.radius;
+            t.y = pt.y + Math.sin(orbital.angle) * orbital.radius;
+        } else {
+            // Parent dead, destroy orbital
+            this.entityManager.removeEntity(entity);
         }
     }
 
@@ -46,6 +75,12 @@ export class CombatSystem extends System {
             this.handleWhip(entity, weapon);
         } else if (weapon.type === 'aura') {
             this.handleAura(entity, weapon);
+        } else if (weapon.type === 'mines') {
+            this.handleMines(entity, weapon);
+        } else if (weapon.type === 'orbital') {
+            this.handleOrbital(entity, weapon);
+        } else if (weapon.type === 'turret') {
+            this.handleTurret(entity, weapon);
         }
     }
 
@@ -75,28 +110,168 @@ export class CombatSystem extends System {
     }
 
     handleWhip(entity, weapon) {
-        // Attack horizontally (Left/Right based on movement or random)
-        // For simplicity: Always attacks RIGHT for now, or alternates.
-        // Needs to spawn a temporary hitbox entity.
-        this.spawnMeleeHitbox(entity, weapon, 50, 0); // Offset X
-        this.spawnMeleeHitbox(entity, weapon, -50, 0); // Offset X (Double whip!)
+        this.spawnMeleeHitbox(entity, weapon, 50, 0);
+        this.spawnMeleeHitbox(entity, weapon, -50, 0);
         weapon.cooldown = 1 / weapon.fireRate;
 
         if (entity.tags.has('player') && this.audioSystem) {
-            this.audioSystem.playNoise(0.1, 0.3); // Woosh effect
+            this.audioSystem.playNoise(0.1, 0.3);
         }
     }
 
     handleAura(entity, weapon) {
-        // Aura is a persistent hitbox around player.
-        // Actually, we can just spawn a short-lived large circle every tick?
-        // Or better: Spawn one entity that follows player.
-        // For this ECS, spawning a short-lived pulse is easier to manage without parent-child hierarchy.
         this.spawnAreaHitbox(entity, weapon);
         weapon.cooldown = 1 / weapon.fireRate;
+    }
 
-        // Aura sound is annoying if played every tick (fireRate is high).
-        // Maybe skipping it or playing very low.
+    handleMines(entity, weapon) {
+        // Drop mine at current position
+        const t = entity.getComponent('TransformComponent');
+        this.spawnMine(entity, t.x, t.y, weapon);
+        weapon.cooldown = 1 / weapon.fireRate;
+    }
+
+    handleOrbital(entity, weapon) {
+        // Spawn orbs if not enough count
+        // Basic check: count tracked in weapon component?
+        // Let's check active orbitals
+        // For simplicity: If cooldown is 0 (initial), spawn all.
+        // Or if we want to respawn them.
+
+        // This logic is tricky in stateless system.
+        // We'll verify if we have spawned them by checking weapon.orbitals array of IDs.
+        // Filter dead ones.
+
+        weapon.orbitals = weapon.orbitals.filter(id => {
+            const e = this.entityManager.getEntities().find(ent => ent.id === id);
+            return e && e.active;
+        });
+
+        if (weapon.orbitals.length < weapon.orbitalCount) {
+            // Spawn missing orb
+            const id = this.spawnOrbital(entity, weapon, weapon.orbitals.length * (Math.PI * 2 / weapon.orbitalCount));
+            weapon.orbitals.push(id);
+        }
+
+        // Cooldown just checks periodically
+        weapon.cooldown = 1.0;
+    }
+
+    handleTurret(entity, weapon) {
+        const t = entity.getComponent('TransformComponent');
+        this.spawnTurret(entity, t.x, t.y, weapon);
+        weapon.cooldown = 1 / weapon.fireRate; // Very long cooldown (e.g. 5s)
+    }
+
+    spawnMine(source, x, y, weapon) {
+        const mine = this.entityManager.createEntity();
+        mine.tags.add('projectile');
+
+        mine.addComponent(new TransformComponent());
+        const t = mine.getComponent('TransformComponent');
+        t.x = x;
+        t.y = y;
+
+        mine.addComponent(new RenderComponent());
+        const r = mine.getComponent('RenderComponent');
+        r.shape = 'circle';
+        r.width = 16;
+        r.height = 16;
+        r.color = weapon.color;
+        r.layer = 2; // Floor
+
+        mine.addComponent(new ProjectileComponent());
+        const p = mine.getComponent('ProjectileComponent');
+        p.damage = weapon.damage;
+        p.sourceId = source.id;
+        p.lifetime = weapon.duration;
+        p.isMine = true;
+
+        mine.addComponent(new ColliderComponent());
+        const c = mine.getComponent('ColliderComponent');
+        c.radius = 16;
+        c.isTrigger = true;
+        c.tags = source.tags.has('player') ? ['enemy'] : ['player'];
+
+        // Add Fire element
+        if (weapon.tags) {
+            mine.addComponent(new ElementalComponent());
+            for (const tag of weapon.tags) mine.getComponent('ElementalComponent').tags.add(tag);
+        }
+    }
+
+    spawnOrbital(source, weapon, initialAngle) {
+        const orb = this.entityManager.createEntity();
+        orb.tags.add('projectile');
+
+        orb.addComponent(new TransformComponent()); // Position updated by system
+
+        orb.addComponent(new RenderComponent());
+        const r = orb.getComponent('RenderComponent');
+        r.shape = 'circle';
+        r.width = 12;
+        r.height = 12;
+        r.color = weapon.color;
+        r.layer = 20;
+
+        orb.addComponent(new ProjectileComponent());
+        const p = orb.getComponent('ProjectileComponent');
+        p.damage = weapon.damage;
+        p.sourceId = source.id;
+        p.lifetime = 9999; // Persistent until parent dies
+        p.isOrbital = true;
+
+        orb.addComponent(new OrbitalComponent());
+        const o = orb.getComponent('OrbitalComponent');
+        o.parentId = source.id;
+        o.radius = weapon.range;
+        o.speed = weapon.speed;
+        o.angle = initialAngle;
+
+        orb.addComponent(new ColliderComponent());
+        const c = orb.getComponent('ColliderComponent');
+        c.radius = 12;
+        c.isTrigger = true;
+        c.tags = source.tags.has('player') ? ['enemy'] : ['player'];
+
+        if (weapon.tags) {
+            orb.addComponent(new ElementalComponent());
+            for (const tag of weapon.tags) orb.getComponent('ElementalComponent').tags.add(tag);
+        }
+
+        return orb.id;
+    }
+
+    spawnTurret(source, x, y, weapon) {
+        const turret = this.entityManager.createEntity();
+        turret.tags.add('ally'); // Turret is an entity that shoots
+
+        turret.addComponent(new TransformComponent());
+        const t = turret.getComponent('TransformComponent');
+        t.x = x;
+        t.y = y;
+
+        turret.addComponent(new RenderComponent());
+        const r = turret.getComponent('RenderComponent');
+        r.shape = 'rect';
+        r.width = 24;
+        r.height = 24;
+        r.color = weapon.color;
+
+        // Turret has its own weapon!
+        turret.addComponent(new WeaponComponent());
+        const w = turret.getComponent('WeaponComponent');
+        w.type = 'pistol'; // Basic shots
+        w.damage = weapon.damage;
+        w.range = weapon.range;
+        w.fireRate = 2.0; // Fast fire
+        w.projectileSpeed = weapon.projectileSpeed;
+        w.color = '#ffff00';
+
+        // Lifetime managed via Health or specific component?
+        // Let's use ProjectileComponent for lifetime easy hack, even if it's not a projectile moving
+        turret.addComponent(new ProjectileComponent());
+        turret.getComponent('ProjectileComponent').lifetime = weapon.duration;
     }
 
     spawnMeleeHitbox(source, weapon, offsetX, offsetY) {

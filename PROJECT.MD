@@ -1,7 +1,7 @@
 # PROJET GENESIS SURVIVOR ENGINE (GSE-v1)
 
 ## ÉTAT DU PROJET
-**Dernière mise à jour :** Phase V2-B (Support & Bullet Hell).
+**Dernière mise à jour :** Phase V2-C (Armes Secondaires & Bestiaire Étendu).
 **Moteur :** ECS Custom (Vanilla JS).
 **Dépendances :** Aucune (Zero Dependency).
 
@@ -19,20 +19,20 @@ Ces fonctionnalités sont implémentées et vérifiées.
 
 *   **Gameplay Core**
     *   [x] Mouvement Joueur (Clavier + Joystick Mobile).
-    *   [x] Tir Automatique (Pistolet, Fouet, Aura).
+    *   [x] Tir Automatique (Pistolet, Fouet, Aura, Mines, Orbes, Tourelle).
     *   [x] Vagues d'ennemis scriptées (5 minutes + Boss).
-    *   [x] Types d'ennemis : Basic (Chase), Shooter (Distance), Charger (Dash), Boss (PV élevés).
+    *   [x] Types d'ennemis : Basic, Shooter, Charger, Boss, Healer, Buffer, Ghost, Kamikaze.
     *   [x] Progression : XP, Level Up, Ramassage magnétique.
     *   [x] **Dash Actif :** Compétence d'esquive (i-frames) activée par Espace/Bouton Mobile.
     *   [x] **Pickups Utilitaires :** Potions de soin et Aimants (Drops rares).
-    *   [x] **Bestiaire Support :** Healers (Soigneurs) et Buffers (Boost vitesse).
+    *   [x] **Bestiaire Support/Unique :** Healers, Buffers, Ghosts (traverse les murs), Kamikazes (explosion).
     *   [x] **Boss "Bullet Hell" :** Patterns Spirales et Anneaux en Phase 2.
 
 *   **Systèmes Avancés**
     *   [x] **Alchimie :** Interactions (Feu + Huile = Explosion, Eau + Électricité = Stun).
     *   [x] **Terraformation :** Zones persistantes au sol (Ralentissement, Dégâts).
     *   [x] **Audio :** Synthétiseur procédural (Web Audio API) pour SFX sans assets.
-    *   [x] **Meta-Progression :** Shop (Or, Stats), Sauvegarde sécurisée (XOR + Checksum).
+    *   [x] **Meta-Progression :** Shop (Or, Stats, Armes), Sauvegarde sécurisée (XOR + Checksum).
 
 *   **UI & Polish**
     *   [x] Menus : Start, Shop, Game Over, Victory, Pause.
@@ -45,10 +45,6 @@ Ces fonctionnalités sont implémentées et vérifiées.
 
 ## 2. ROADMAP V2 (EN DÉVELOPPEMENT)
 Les éléments marqués d'un triangle rouge 🔺 sont à implémenter ou à tester.
-
-### B. GAMEPLAY ET CONTENU (SUITE)
-*   **Nouvelles Mécaniques**
-    *   🔺 **Armes Secondaires (Passives) :** Mines, Tourelles, Orbes rotatives.
 
 ### C. HUB & METAGAME (NOUVEAU SCOPE)
 *   **Le HUB (Quartier Général)**

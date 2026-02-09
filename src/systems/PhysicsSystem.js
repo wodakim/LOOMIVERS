@@ -54,6 +54,14 @@ export class PhysicsSystem extends System {
         const c1 = e1.getComponent('ColliderComponent');
         const c2 = e2.getComponent('ColliderComponent');
 
+        // Check for Ghost logic (No collision with other enemies)
+        // If BOTH are enemies AND ONE has 'ghost' tag -> Skip
+        if (e1.tags.has('enemy') && e2.tags.has('enemy')) {
+            if (c1.tags.includes('ghost') || c2.tags.includes('ghost')) {
+                return;
+            }
+        }
+
         const dx = t1.x - t2.x;
         const dy = t1.y - t2.y;
         const distSq = dx * dx + dy * dy;

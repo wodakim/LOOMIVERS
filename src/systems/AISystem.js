@@ -39,8 +39,7 @@ export class AISystem extends System {
                 // Support Logic
                 if (entity.hasComponent('SupportComponent')) {
                     this.handleSupport(entity, dt);
-                    // Support enemies also move (slow chase or flee)
-                    this.handleChase(entity, targetTransform, dt, 0.5); // Slower
+                    this.handleChase(entity, targetTransform, dt, 0.5);
                     continue;
                 }
 
@@ -48,11 +47,67 @@ export class AISystem extends System {
                     this.handleShooter(entity, targetTransform, dt, ai);
                 } else if (ai.behavior === 'charger') {
                     this.handleCharger(entity, targetTransform, dt, ai);
+                } else if (ai.behavior === 'ghost') {
+                    this.handleChase(entity, targetTransform, dt, 0.6); // Slower but no collision
+                } else if (ai.behavior === 'kamikaze') {
+                    this.handleKamikaze(entity, targetTransform, dt);
                 } else {
                     this.handleChase(entity, targetTransform, dt);
                 }
             }
         }
+    }
+
+    handleKamikaze(entity, targetTransform, dt) {
+        const transform = entity.getComponent('TransformComponent');
+        const dx = targetTransform.x - transform.x;
+        const dy = targetTransform.y - transform.y;
+        const distSq = dx*dx + dy*dy;
+
+        // Explode if close
+        if (distSq < 50 * 50) {
+            // Trigger Explosion
+            const health = entity.getComponent('HealthComponent');
+            health.current = 0; // Die immediately
+
+            // Spawn explosion effect/damage via separate entity or event?
+            // Let's spawn a mine-like explosion instantly
+            this.triggerKamikazeExplosion(transform);
+        } else {
+            // Chase fast
+            this.handleChase(entity, targetTransform, dt, 1.5);
+        }
+    }
+
+    triggerKamikazeExplosion(transform) {
+        const explosion = this.entityManager.createEntity();
+        explosion.tags.add('projectile');
+
+        explosion.addComponent(new TransformComponent());
+        explosion.getComponent('TransformComponent').x = transform.x;
+        explosion.getComponent('TransformComponent').y = transform.y;
+
+        // Visual
+        explosion.addComponent(new RenderComponent());
+        const r = explosion.getComponent('RenderComponent');
+        r.shape = 'circle';
+        r.width = 100; // Big boom
+        r.height = 100;
+        r.color = '#ff0000';
+        r.layer = 20;
+
+        // Logic
+        explosion.addComponent(new ProjectileComponent());
+        const p = explosion.getComponent('ProjectileComponent');
+        p.damage = 40; // High damage
+        p.sourceId = -1; // Neutral or Enemy source
+        p.lifetime = 0.2;
+
+        explosion.addComponent(new ColliderComponent());
+        const c = explosion.getComponent('ColliderComponent');
+        c.radius = 50;
+        c.isTrigger = true;
+        c.tags = ['player']; // Hurts player
     }
 
     handleSupport(entity, dt) {
@@ -77,23 +132,17 @@ export class AISystem extends System {
 
             if (distSq < support.range * support.range) {
                 if (support.type === 'healer') {
-                    // Heal wounded allies
                     if (neighbor.hasComponent('HealthComponent')) {
                         const h = neighbor.getComponent('HealthComponent');
                         if (h.current < h.max) {
                             h.current = Math.min(h.current + support.effectStrength, h.max);
-                            // Visual beam
                             this.spawnBeam(transform, nTransform, '#00ff00');
                             actionTriggered = true;
                         }
                     }
                 } else if (support.type === 'buffer') {
-                    // Buff speed
                     if (neighbor.hasComponent('VelocityComponent')) {
                         const v = neighbor.getComponent('VelocityComponent');
-                        // Temp boost (simple logic: add speed if not already too fast)
-                        // A proper system would use a BuffComponent with duration
-                        // For POC: Instant push
                         v.vx *= 1.2;
                         v.vy *= 1.2;
                         this.spawnBeam(transform, nTransform, '#00ffff');
@@ -118,7 +167,6 @@ export class AISystem extends System {
         p.getComponent('RenderComponent').shape = 'circle';
         p.getComponent('RenderComponent').width = 10;
         p.getComponent('RenderComponent').height = 10;
-        // Should ideally be removed next frame or use ParticleSystem
     }
 
     handleChase(entity, targetTransform, dt, speedMod = 1.0) {
@@ -164,31 +212,25 @@ export class AISystem extends System {
         const dy = targetTransform.y - transform.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Movement Logic: Keep Distance
         const desiredDist = ai.shootRange || 300;
         let moveDirX = 0;
         let moveDirY = 0;
 
         if (dist > desiredDist + 50) {
-             // Too far: Chase
              moveDirX = dx / dist;
              moveDirY = dy / dist;
         } else if (dist < desiredDist - 50) {
-             // Too close: Flee
              moveDirX = -(dx / dist);
              moveDirY = -(dy / dist);
         } else {
-            // Sweet spot: Stop (or strafe later)
             moveDirX = 0;
             moveDirY = 0;
         }
 
-        // Apply Separation even for Shooters
         const separationForce = this.calculateSeparation(entity, transform);
         moveDirX += separationForce.x * 2.0;
         moveDirY += separationForce.y * 2.0;
 
-        // Normalize
         const moveLen = Math.sqrt(moveDirX*moveDirX + moveDirY*moveDirY);
         if (moveLen > 0) {
             moveDirX /= moveLen;
@@ -198,11 +240,10 @@ export class AISystem extends System {
         velocity.vx = moveDirX * velocity.speed * 0.8;
         velocity.vy = moveDirY * velocity.speed * 0.8;
 
-        // Shooting Logic
         ai.shootTimer -= dt;
         if (ai.shootTimer <= 0 && dist < ai.shootRange * 1.5) {
             this.shooterFire(entity, targetTransform);
-            ai.shootTimer = 2.0; // Fire every 2s
+            ai.shootTimer = 2.0;
         }
     }
 
@@ -357,14 +398,12 @@ export class AISystem extends System {
         const velocity = entity.getComponent('VelocityComponent');
         const health = entity.getComponent('HealthComponent');
 
-        // Check Phase Change
         if (boss.phase === 1 && health.current < health.max * 0.5) {
             boss.phase = 2;
-            boss.attackCooldown = 0.1; // Enrage speed
+            boss.attackCooldown = 0.1;
             console.log("BOSS PHASE 2");
         }
 
-        // Movement (Always Chase Slow)
         const dx = targetTransform.x - transform.x;
         const dy = targetTransform.y - transform.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -374,10 +413,8 @@ export class AISystem extends System {
             velocity.vy = (dy / dist) * velocity.speed;
         }
 
-        // Attack Logic
         boss.patternTimer -= dt;
         if (boss.patternTimer <= 0) {
-            // Switch pattern
             boss.currentPattern = boss.currentPattern === 'spiral' ? 'ring' : 'spiral';
             boss.patternTimer = boss.patternDuration;
         }
@@ -395,7 +432,7 @@ export class AISystem extends System {
 
     fireSpiralPattern(entity, boss) {
         const transform = entity.getComponent('TransformComponent');
-        const branches = boss.phase === 2 ? 4 : 2; // More branches in phase 2
+        const branches = boss.phase === 2 ? 4 : 2;
 
         for (let i = 0; i < branches; i++) {
             const angle = boss.angleOffset + (i * (Math.PI * 2 / branches));
@@ -405,14 +442,10 @@ export class AISystem extends System {
             this.spawnProjectile(transform.x, transform.y, targetX, targetY, entity);
         }
 
-        boss.angleOffset += 0.2; // Rotate
+        boss.angleOffset += 0.2;
     }
 
     fireRingPattern(entity, boss) {
-        // Fire expanding ring occasionally
-        // Since this is called every 0.2s, a full ring is too much.
-        // Let's fire a rapid burst in a random direction or a dense wave.
-        // For Bullet Hell: Fire a ring of 10 bullets
         const transform = entity.getComponent('TransformComponent');
         const count = 12;
 
@@ -423,9 +456,8 @@ export class AISystem extends System {
 
             this.spawnProjectile(transform.x, transform.y, targetX, targetY, entity);
         }
-        boss.angleOffset += 0.05; // Slow rotation
+        boss.angleOffset += 0.05;
 
-        // Reset cooldown longer for ring to avoid lag
         boss.attackCooldown = 1.0;
     }
 }

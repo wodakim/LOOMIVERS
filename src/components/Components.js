@@ -97,7 +97,7 @@ export class AIComponent extends Component {
         this.targetId = -1; // ID de l'entité cible (ex: Joueur)
         this.state = 'idle'; // 'idle', 'chase', 'attack'
         this.detectionRadius = 300;
-        this.behavior = 'chase'; // 'chase' (default), 'shooter', 'charger'
+        this.behavior = 'chase'; // 'chase', 'shooter', 'charger', 'ghost', 'kamikaze'
         this.chargeTimer = 0;
         this.isCharging = false;
         this.shootTimer = 0;
@@ -142,7 +142,7 @@ export class ColliderComponent extends Component {
         this.width = 32;
         this.height = 32;
         this.isTrigger = false;
-        this.tags = []; // 'player', 'enemy', 'wall'
+        this.tags = []; // 'player', 'enemy', 'wall', 'ghost'
     }
 
     reset() {

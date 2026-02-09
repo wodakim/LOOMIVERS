@@ -247,6 +247,25 @@ export class WaveManager {
             const sup = enemy.getComponent('SupportComponent');
             sup.type = 'buffer';
             sup.range = 300;
+
+        } else if (type === 'ghost') {
+            v.speed = 40; // Slow but direct
+            h.current = h.max = 40;
+            s.value = 20;
+            r.color = 'rgba(255, 255, 255, 0.5)'; // Transparent white
+            r.shape = 'circle';
+
+            ai.behavior = 'ghost';
+            c.tags.push('ghost'); // For physics filter
+
+        } else if (type === 'kamikaze') {
+            v.speed = 120; // Very fast
+            h.current = h.max = 20; // Glass cannon
+            s.value = 30;
+            r.color = '#ffaa00'; // Orange warning
+            r.shape = 'rect'; // distinct
+
+            ai.behavior = 'kamikaze';
         }
     }
 }

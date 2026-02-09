@@ -54,7 +54,11 @@ export class GameManager {
         }
 
         // Shop Item Buttons
-        const upgradeKeys = ['health_boost', 'damage_boost', 'speed_boost', 'unlock_whip'];
+        const upgradeKeys = [
+            'health_boost', 'damage_boost', 'speed_boost',
+            'unlock_whip', 'unlock_mines', 'unlock_orbital', 'unlock_turret'
+        ];
+
         upgradeKeys.forEach(key => {
             const btn = document.getElementById(`buy-${key}`);
             if (btn) {

@@ -57,7 +57,8 @@ export const WavesConfig = [
         time: 120,
         enemies: [
             { type: 'tier1', count: 10, interval: 0.3 },
-            { type: 'charger', count: 2, interval: 5.0 } // Intro Chargers (Attention !)
+            { type: 'charger', count: 2, interval: 5.0 }, // Intro Chargers (Attention !)
+            { type: 'ghost', count: 3, interval: 3.0 } // Intro Ghosts
         ]
     },
     {
@@ -65,7 +66,8 @@ export const WavesConfig = [
         enemies: [
             { type: 'tier1', count: 20, interval: 0.3 },
             { type: 'charger', count: 4, interval: 3.0 },
-            { type: 'shooter', count: 4, interval: 2.0 }
+            { type: 'shooter', count: 4, interval: 2.0 },
+            { type: 'kamikaze', count: 2, interval: 10.0 } // Intro Kamikaze
         ]
     },
 
@@ -75,7 +77,8 @@ export const WavesConfig = [
         enemies: [
             { type: 'tier1', count: 30, interval: 0.2 }, // Horde dense
             { type: 'healer', count: 2, interval: 5.0 }, // Support intro
-            { type: 'tier2', count: 3, interval: 5.0 }
+            { type: 'tier2', count: 3, interval: 5.0 },
+            { type: 'ghost', count: 5, interval: 2.0 }
         ]
     },
     {
@@ -83,7 +86,8 @@ export const WavesConfig = [
         enemies: [
             { type: 'shooter', count: 10, interval: 1.0 }, // Bullet Hell check
             { type: 'buffer', count: 2, interval: 10.0 }, // Support intro
-            { type: 'charger', count: 5, interval: 2.0 }
+            { type: 'charger', count: 5, interval: 2.0 },
+            { type: 'kamikaze', count: 5, interval: 5.0 }
         ]
     },
 
@@ -93,14 +97,16 @@ export const WavesConfig = [
         enemies: [
             { type: 'tier2', count: 10, interval: 2.0 }, // Armée d'Elites
             { type: 'healer', count: 5, interval: 3.0 },
-            { type: 'tier1', count: 40, interval: 0.1 }
+            { type: 'tier1', count: 40, interval: 0.1 },
+            { type: 'ghost', count: 10, interval: 1.0 }
         ]
     },
     {
         time: 270,
         enemies: [
             { type: 'charger', count: 10, interval: 1.0 }, // Charge massive
-            { type: 'shooter', count: 10, interval: 1.0 }
+            { type: 'shooter', count: 10, interval: 1.0 },
+            { type: 'kamikaze', count: 10, interval: 2.0 }
         ]
     },
 
