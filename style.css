@@ -51,8 +51,17 @@ canvas {
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Laisse passer les clics vers le canvas */
+    pointer-events: none; /* Par défaut, on traverse pour aller au canvas */
     z-index: 10;
+}
+
+/* Rendre les écrans et boutons interactifs */
+.screen {
+    pointer-events: auto; /* Réactive les clics pour les écrans de menu */
+}
+
+#health-bar-container, #xp-bar-container, #score-display {
+    pointer-events: none; /* HUD non interactif */
 }
 
 #health-bar-container {

@@ -16,14 +16,31 @@ export class GameManager {
         this.finalScoreElement = document.getElementById('final-score');
 
         // Buttons
-        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
-        document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                console.log('Start Button Clicked');
+                this.startGame();
+            });
+        } else {
+            console.error('Start Button not found!');
+        }
+
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                console.log('Restart Button Clicked');
+                this.restartGame();
+            });
+        }
 
         // Initial State
         this.showScreen(this.menuScreen);
     }
 
     startGame() {
+        console.log('Game Starting...');
         this.state = GameState.PLAYING;
         this.hideAllScreens();
         this.game.start();
