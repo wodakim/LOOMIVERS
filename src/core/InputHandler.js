@@ -10,75 +10,138 @@ export class InputHandler {
         // État du joystick virtuel
         this.joystick = {
             active: false,
+            id: null,
             origin: { x: 0, y: 0 },
             current: { x: 0, y: 0 },
             vector: { x: 0, y: 0 } // Normalisé (-1 à 1)
         };
 
+        // État des boutons virtuels
+        this.actions = {
+            dash: false,
+            pause: false
+        };
+
         this.setupKeyboardListeners();
         this.setupTouchListeners();
+        this.setupVirtualButtons();
     }
 
     setupKeyboardListeners() {
         window.addEventListener('keydown', (e) => {
             this.keys.add(e.code);
+            if (e.code === 'Space') this.actions.dash = true;
         });
 
         window.addEventListener('keyup', (e) => {
             this.keys.delete(e.code);
+            if (e.code === 'Space') this.actions.dash = false;
         });
+    }
+
+    setupVirtualButtons() {
+        const dashBtn = document.getElementById('btn-dash');
+        const pauseBtn = document.getElementById('btn-pause');
+
+        if (dashBtn) {
+            dashBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.actions.dash = true;
+                dashBtn.style.transform = 'scale(0.9)';
+            });
+            dashBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.actions.dash = false;
+                dashBtn.style.transform = 'scale(1)';
+            });
+        }
+
+        if (pauseBtn) {
+            pauseBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                // Toggle pause via event emission simulation (handled in GameManager update loop or separate check)
+                // For direct input polling:
+                this.actions.pause = true;
+                // Need to reset it quickly or handle toggle logic elsewhere
+                setTimeout(() => this.actions.pause = false, 100);
+
+                // Direct call fallback if needed (GameManager listens to keydown usually)
+                const event = new KeyboardEvent('keydown', { key: 'P' });
+                window.dispatchEvent(event);
+            });
+        }
     }
 
     setupTouchListeners() {
-        // On attache les écouteurs au canvas plus tard ou globalement pour l'instant
-        // Pour un joystick virtuel global, on peut écouter sur window ou un overlay spécifique
+        const zone = document.getElementById('joystick-zone');
+        const knob = document.getElementById('joystick-knob');
 
-        window.addEventListener('touchstart', (e) => {
+        if (!zone || !knob) return;
+
+        zone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             const touch = e.changedTouches[0];
-            // Si on touche la moitié gauche de l'écran (convention mobile pour le mouvement)
-            if (touch.clientX < window.innerWidth / 2) {
-                this.joystick.active = true;
-                this.joystick.origin = { x: touch.clientX, y: touch.clientY };
-                this.joystick.current = { x: touch.clientX, y: touch.clientY };
-                this.updateJoystickVector();
+            this.joystick.id = touch.identifier;
+            this.joystick.active = true;
+
+            // Center is relative to the zone
+            const rect = zone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            this.joystick.origin = { x: centerX, y: centerY };
+            this.updateJoystickFromTouch(touch.clientX, touch.clientY, knob);
+        }, { passive: false });
+
+        zone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!this.joystick.active) return;
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.joystick.id) {
+                    const touch = e.changedTouches[i];
+                    this.updateJoystickFromTouch(touch.clientX, touch.clientY, knob);
+                    break;
+                }
             }
         }, { passive: false });
 
-        window.addEventListener('touchmove', (e) => {
-            if (!this.joystick.active) return;
-            // e.preventDefault(); // Empêcher le scroll
+        const endJoystick = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.joystick.id) {
+                    this.joystick.active = false;
+                    this.joystick.vector = { x: 0, y: 0 };
+                    knob.style.transform = `translate(-50%, -50%)`; // Reset visual
+                    break;
+                }
+            }
+        };
 
-            // Trouver le touch correspondant au joystick (le premier actif ici pour simplifier la POC)
-            // Dans une version complète, on suivrait l'ID du touch
-            const touch = e.changedTouches[0];
-
-            this.joystick.current = { x: touch.clientX, y: touch.clientY };
-            this.updateJoystickVector();
-        }, { passive: false });
-
-        window.addEventListener('touchend', (e) => {
-             if (this.joystick.active) {
-                 this.joystick.active = false;
-                 this.joystick.vector = { x: 0, y: 0 };
-             }
-        });
+        zone.addEventListener('touchend', endJoystick);
+        zone.addEventListener('touchcancel', endJoystick);
     }
 
-    updateJoystickVector() {
-        const dx = this.joystick.current.x - this.joystick.origin.x;
-        const dy = this.joystick.current.y - this.joystick.origin.y;
+    updateJoystickFromTouch(clientX, clientY, knob) {
+        const dx = clientX - this.joystick.origin.x;
+        const dy = clientY - this.joystick.origin.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDist = 50; // Rayon max du joystick en pixels
+        const maxDist = 35; // Visual limit inside the 120px zone
 
-        if (distance > 0) {
-            // Normalisation
-            const limitedDist = Math.min(distance, maxDist);
-            const scale = limitedDist / distance; // Pour limiter visuellement le stick
+        const angle = Math.atan2(dy, dx);
 
-            // Le vecteur de sortie est normalisé entre -1 et 1
+        // Visual Update
+        const visualDist = Math.min(distance, maxDist);
+        const knobX = Math.cos(angle) * visualDist;
+        const knobY = Math.sin(angle) * visualDist;
+
+        knob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+
+        // Vector Update (Normalized)
+        // Deadzone check
+        if (distance > 5) {
             this.joystick.vector = {
-                x: (dx / distance) * (limitedDist / maxDist),
-                y: (dy / distance) * (limitedDist / maxDist)
+                x: Math.cos(angle),
+                y: Math.sin(angle)
             };
         } else {
             this.joystick.vector = { x: 0, y: 0 };
@@ -90,6 +153,11 @@ export class InputHandler {
      * @returns {{x: number, y: number}} Vecteur normalisé.
      */
     getMovementVector() {
+        // Priorité au Joystick s'il est actif
+        if (this.joystick.active && (this.joystick.vector.x !== 0 || this.joystick.vector.y !== 0)) {
+            return this.joystick.vector;
+        }
+
         let x = 0;
         let y = 0;
 
@@ -104,14 +172,12 @@ export class InputHandler {
             const length = Math.sqrt(x * x + y * y);
             x /= length;
             y /= length;
-            return { x, y };
         }
 
-        // Sinon, on retourne le joystick
-        if (this.joystick.active) {
-            return this.joystick.vector;
-        }
+        return { x, y };
+    }
 
-        return { x: 0, y: 0 };
+    isDashPressed() {
+        return this.actions.dash;
     }
 }

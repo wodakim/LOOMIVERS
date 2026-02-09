@@ -1,62 +1,88 @@
 # PROJET GENESIS SURVIVOR ENGINE (GSE-v1)
 
-## VUE D'ENSEMBLE
-Ce document décrit l'architecture technique du moteur de jeu "Genesis Survivor".
-L'objectif est de créer un moteur performant, sécurisé et optimisé pour le SEO, sans aucune dépendance externe (Vanilla JS).
+## ÉTAT DU PROJET
+**Dernière mise à jour :** Phase "Final Polish" v1.
+**Moteur :** ECS Custom (Vanilla JS).
+**Dépendances :** Aucune (Zero Dependency).
 
-## ARCHITECTURE
-Le moteur repose sur une architecture **ECS (Entity Component System)** stricte pour garantir des performances élevées (60 FPS avec 3000 sprites).
+---
 
-### 1. BOUCLE DE JEU (GAME LOOP)
-*   **Type :** Pas de temps fixe (Fixed Time Step).
-*   **Logique :** Découplée du taux de rafraîchissement de l'écran. La physique tourne à une fréquence fixe pour le déterminisme.
-*   **Rendu :** Interpolation entre les états pour une fluidité maximale.
+## 1. FONCTIONNALITÉS TERMINÉES (V1 - STABLE) ✅
+Ces fonctionnalités sont implémentées et vérifiées.
 
-### 2. GESTION DE LA MÉMOIRE
-*   **Object Pooling :** Réutilisation stricte des entités et composants (ObjectPool). Pas d'allocation dynamique (`new`) pendant le gameplay pour éviter les pics de latence dus au Garbage Collector.
+*   **Architecture Moteur**
+    *   [x] Boucle de jeu (GameLoop) avec pas de temps fixe.
+    *   [x] ECS (Entity Component System) complet.
+    *   [x] Gestionnaire de mémoire (Object Pool) pour Entités.
+    *   [x] Physique : Spatial Hashing (Grille) pour collisions optimisées.
+    *   [x] Rendu : Canvas API 2D optimisé + Offscreen Canvas (Terraformation).
 
-### 3. RENDU & PHYSIQUE
-*   **Canvas API :** Rendu optimisé via un seul canvas principal.
-*   **Background Canvas :** Canvas dédié (Offscreen/Underlay) pour la Terraformation (Zones persistantes).
-*   **Spatial Hash Grid :** Système de détection de collision optimisé (O(1) en moyenne) pour gérer des milliers d'entités.
-*   **Debug Mode :** Visualisation de la grille spatiale et des hitbox pour le débogage.
+*   **Gameplay Core**
+    *   [x] Mouvement Joueur (Clavier).
+    *   [x] Tir Automatique (Pistolet, Fouet, Aura).
+    *   [x] Vagues d'ennemis scriptées (5 minutes + Boss).
+    *   [x] Types d'ennemis : Basic (Chase), Shooter (Distance), Charger (Dash), Boss (PV élevés).
+    *   [x] Progression : XP, Level Up, Ramassage magnétique.
 
-### 4. GAMEPLAY & FEATURES
-*   **Game State :** Machine à états (MENU, PLAY, SHOP, GAMEOVER) gérée par `GameManager`.
-*   **Combat System :**
-    *   **Tir automatique :** Sur l'ennemi le plus proche avec gestion de cooldown.
-    *   **Armes variées :** Projectiles standards, Fouet (Zone horizontale), Aura (Zone autour du joueur).
-*   **Elemental Alchemy :** Réactions élémentaires (Feu + Huile = Explosion) gérées par `AlchemySystem`.
-*   **XP & Level Up :** Système de progression avec gemmes d'XP magnétiques et niveaux.
-*   **Wave Manager :** Système de script pour faire apparaître des vagues d'ennemis progressives (`WavesConfig.js`).
-    *   **Boss :** Apparition d'un Boss massif avec barre de vie dédiée à 60 secondes.
-*   **Terraformation :** Gestion d'effets environnementaux persistants (Feu, Eau) via un canvas séparé.
-*   **Particles :** Système de particules simple pour le feedback visuel (impacts, sang, explosions).
-*   **Damage & Stats :** Gestion des PV, Dégâts, Score et Textes flottants.
+*   **Systèmes Avancés**
+    *   [x] **Alchimie :** Interactions (Feu + Huile = Explosion, Eau + Électricité = Stun).
+    *   [x] **Terraformation :** Zones persistantes au sol (Ralentissement, Dégâts).
+    *   [x] **Audio :** Synthétiseur procédural (Web Audio API) pour SFX sans assets.
+    *   [x] **Meta-Progression :** Shop (Or, Stats), Sauvegarde sécurisée (XOR + Checksum).
 
-### 5. META-PROGRESSION & ÉCONOMIE (SHOP)
-*   **Système de Sauvegarde (UpgradeManager) :** Persistance de l'Or et des Statistiques (Santé, Dégâts, Vitesse) entre les sessions.
-*   **Boutique (Shop) :** Interface dédiée permettant d'acheter des améliorations permanentes et de débloquer de nouvelles armes.
-*   **Sécurité (Anti-Cheat) :**
-    *   **Chiffrement XOR :** Sauvegarde chiffrée avec clé rotative basée sur le timestamp initial.
-    *   **Checksum :** Hash de vérification pour détecter toute altération manuelle du `localStorage`.
+*   **UI & Polish**
+    *   [x] Menus : Start, Shop, Game Over, Victory, Pause.
+    *   [x] Feedback : Hit Flash, Textes flottants (Critiques rouges), Timer.
+    *   [x] SEO : Structure sémantique HTML5 + JSON-LD.
 
-### 6. AUDIO & IMMERSION
-*   **AudioSystem :** Gestionnaire de sons procéduraux (Oscillators) pour les effets sonores (Tir, Hit, Level Up, Game Over). Aucun fichier audio externe nécessaire.
+---
 
-### 7. SEO & ACCESSIBILITÉ
-*   **DOM Throttling :** Mise à jour asynchrone (toutes les 2s ou via `requestIdleCallback`) d'une description textuelle invisible du jeu pour les moteurs de recherche et lecteurs d'écran.
-*   **Structure Sémantique :** Utilisation de balises HTML5 (`main`, `article`, `figure`) autour du Canvas.
+## 2. ROADMAP V2 (EN DÉVELOPPEMENT)
+Les éléments marqués d'un triangle rouge 🔺 sont à implémenter ou à tester.
 
-## STRUCTURE DES DOSSIERS
-*   `/src/core` : Cœur du moteur (Loop, Input, Save, Pool, WaveManager, GameManager, UpgradeManager, AudioSystem).
-*   `/src/ecs` : Classes de base ECS (Entity, Component, System, Manager).
-*   `/src/systems` : Logique métier (Mouvement, Rendu, Collision, IA, Combat, Damage, Particle, Terraformation, Progression, Alchemy).
-*   `/src/components` : Données (Position, Vitesse, Stats, Weapon, Particle, Progression, Elemental, Boss).
-*   `/src/data` : Configuration (WavesConfig, WeaponTypes).
-*   `/assets` : Ressources graphiques (Placeholders générés dynamiquement).
+### A. PRIORITÉ ABSOLUE (FIX & MOBILE)
+*   **Correction Critique**
+    *   🔺 **Vulnérabilité Joueur :** Le héros est actuellement invincible aux contacts directs. Implémenter "Body Damage" (Collision Ennemi -> Joueur).
+*   **Support Mobile (Responsive)**
+    *   🔺 **Contrôles Tactiles :** Joystick virtuel (Déplacement) et Boutons (Dash, Pause, Shop).
+    *   🔺 **UI Responsive :** Adapter la taille des textes et boutons pour petits écrans.
 
-## DIRECTIVES DE DÉVELOPPEMENT
-*   **Langue du Code :** Anglais (Variables, Fonctions, Classes).
-*   **Langue de Documentation :** Français (JSDoc, Markdown).
-*   **Modules :** ES Modules natifs (`import`/`export`).
+### B. GAMEPLAY ET CONTENU
+*   **Nouvelles Mécaniques**
+    *   🔺 **Dash Actif :** Compétence d'esquive (i-frames) sur touche Espace/Bouton Mobile.
+    *   🔺 **Pickups Utilitaires :** Potions de soin, Aimants, Bombes (Loot rare).
+    *   🔺 **Armes Secondaires (Passives) :** Mines, Tourelles, Orbes rotatives.
+*   **Bestiaire Étendu**
+    *   🔺 **Ennemis Support :** Healers (Soigneurs) et Buffers (Boost vitesse).
+    *   🔺 **Boss "Bullet Hell" :** Patterns de tir géométriques complexes.
+
+### C. HUB & METAGAME (NOUVEAU SCOPE)
+*   **Le HUB (Quartier Général)**
+    *   🔺 **Carte Intactive :** Zone de déplacement libre entre les runs.
+    *   🔺 **Points d'Intérêt (POI) :**
+        *   Leaderboard (Tableau des scores).
+        *   Wardrobe (Sélection personnage).
+        *   Bestiaire (Cage).
+        *   Portail de Sang (Lancer la run).
+    *   🔺 **UI HUB :** Flèches flottantes animées au-dessus des POI.
+*   **Mode "Endless"**
+    *   🔺 **Portail de Retour :** Pop-up explicite pour retourner au HUB après le Boss ou en Endless.
+    *   🔺 **Scaling Infini :** Difficulté exponentielle après 5 minutes.
+
+### D. SYSTÈME DE TRAITS (ROGUELITE)
+*   **Cartes d'Amélioration**
+    *   🔺 **Présentation :** Au Level Up, afficher 3 cartes (Traits).
+    *   🔺 **Animation :** Effet de "Flip" (retournement) lors de l'apparition des cartes.
+    *   🔺 **Contenu :** Traits variés (Balles rebondissantes, Explosion à la mort, etc.).
+
+### E. POLISH V2
+*   **Juice 2.0**
+    *   🔺 **Particules Avancées :** Traînées de projectiles, débris persistants.
+    *   🔺 **Leaderboard Local :** Affichage des meilleurs scores (LocalStorage).
+
+---
+
+## 3. DIRECTIVES TECHNIQUES
+*   **Contrainte :** Toujours ZERO DÉPENDANCE (Vanilla JS).
+*   **Performance :** Maintenir 60 FPS sur mobile.
+*   **Architecture :** Continuer d'utiliser l'ECS pour toutes les nouvelles features.

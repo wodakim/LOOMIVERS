@@ -13,13 +13,25 @@ export class DamageSystem extends System {
         this.audioSystem = audioSystem;
         this.scoreElement = document.getElementById('score-display');
         this.score = 0;
+
+        // Cooldown pour les dégâts de contact (évite 60 hits/sec)
+        this.contactDamageCooldowns = new Map(); // entityId -> timer
     }
 
     update(dt) {
         const entities = this.entityManager.getEntities();
         const grid = this.physicsSystem.grid;
 
-        // 1. Projectiles
+        // Update cooldowns
+        for (const [id, timer] of this.contactDamageCooldowns) {
+            if (timer > 0) {
+                this.contactDamageCooldowns.set(id, timer - dt);
+            } else {
+                this.contactDamageCooldowns.delete(id);
+            }
+        }
+
+        // 1. Projectiles (Trigger)
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('ProjectileComponent') && entity.hasComponent('ColliderComponent') && entity.hasComponent('TransformComponent')) {
                 this.checkProjectileCollision(entity, grid);
@@ -40,6 +52,9 @@ export class DamageSystem extends System {
             }
         }
 
+        // 1b. Check Contact Damage (Player vs Enemy)
+        this.checkContactDamage(entities, grid);
+
         // 2. Score UI
         if (this.scoreElement) {
              this.scoreElement.textContent = `SCORE: ${this.score.toString().padStart(5, '0')}`;
@@ -55,6 +70,63 @@ export class DamageSystem extends System {
                          this.audioSystem.playTone(100, 'sawtooth', 0.1, 0.3);
                     }
                     this.killEntity(entity);
+                }
+            }
+        }
+    }
+
+    checkContactDamage(entities, grid) {
+        let player = null;
+        for (const e of entities) {
+            if (e.tags.has('player')) {
+                player = e;
+                break;
+            }
+        }
+
+        if (!player || !player.active) return;
+
+        // Check cooldown
+        if (this.contactDamageCooldowns.has(player.id)) return;
+
+        const pTransform = player.getComponent('TransformComponent');
+        const pCollider = player.getComponent('ColliderComponent');
+        const pHealth = player.getComponent('HealthComponent');
+
+        if (!pTransform || !pCollider || !pHealth) return;
+
+        // Look for enemies nearby
+        // Using Grid for optimization
+        const col = Math.floor(pTransform.x / this.physicsSystem.cellSize);
+        const row = Math.floor(pTransform.y / this.physicsSystem.cellSize);
+
+        // Check surrounding cells
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                const key = `${col + i},${row + j}`;
+                const cell = grid.get(key);
+                if (cell) {
+                    for (const other of cell) {
+                        if (other.tags.has('enemy') && other.active) {
+                            const oTransform = other.getComponent('TransformComponent');
+                            const oCollider = other.getComponent('ColliderComponent');
+
+                            const dx = pTransform.x - oTransform.x;
+                            const dy = pTransform.y - oTransform.y;
+                            const distSq = dx*dx + dy*dy;
+                            const minDist = pCollider.radius + oCollider.radius; // Hitbox collision
+
+                            if (distSq < minDist * minDist) {
+                                // HIT!
+                                const damage = 10; // Base contact damage
+                                this.applyDamage(player, damage);
+
+                                // Cooldown (i-frames)
+                                this.contactDamageCooldowns.set(player.id, 1.0); // 1 second invulnerability
+                                return; // One hit per frame max
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -167,10 +239,6 @@ export class DamageSystem extends System {
     killEntity(entity) {
         // Trigger Victory if Boss
         if (entity.hasComponent('BossComponent')) {
-            // Need access to GameManager.
-            // In a strict ECS, we might send an event or have GameManager check Entity state.
-            // Hack for POC: Global access or simple check in GameManager loop.
-            // Actually, we can check for 'boss' tag removal in GameManager or set a flag.
             window.game.gameManager.triggerVictory(this.score);
         }
 
