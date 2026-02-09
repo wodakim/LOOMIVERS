@@ -1,76 +1,55 @@
-/**
- * Boucle de jeu principale avec pas de temps fixe (Fixed Time Step).
- * Gère la mise à jour de la logique et le rendu séparément.
- */
 export class GameLoop {
     /**
-     * @param {Function} updateFn - Fonction de mise à jour logique (physique, IA).
-     * @param {Function} renderFn - Fonction de rendu (dessin).
-     * @param {number} targetFPS - Fréquence cible pour la logique (ex: 60Hz).
+     * @param {function(number): void} update - Fonction de mise à jour logique (dt fixe).
+     * @param {function(number): void} render - Fonction de rendu (interpolation).
+     * @param {number} step - Pas de temps fixe (défaut: 1/60s).
      */
-    constructor(updateFn, renderFn, targetFPS = 60) {
-        this.updateFn = updateFn;
-        this.renderFn = renderFn;
-        this.timeStep = 1000 / targetFPS; // ms par frame logique
-
-        this.lastFrameTimeMs = 0;
-        this.accumulatedTime = 0;
+    constructor(update, render, step = 1/60) {
+        this.update = update;
+        this.render = render;
+        this.step = step;
+        this.dt = 0;
+        this.last = 0;
+        this.accumulator = 0;
         this.rafId = null;
         this.isRunning = false;
-
-        // Liaison du contexte pour requestAnimationFrame
-        this.loop = this.loop.bind(this);
     }
 
-    /**
-     * Démarre la boucle de jeu.
-     */
     start() {
-        if (!this.isRunning) {
-            this.isRunning = true;
-            this.lastFrameTimeMs = performance.now();
-            this.rafId = requestAnimationFrame(this.loop);
-        }
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.last = performance.now();
+        this.rafId = requestAnimationFrame(this.frame.bind(this));
     }
 
-    /**
-     * Arrête la boucle de jeu.
-     */
     stop() {
         this.isRunning = false;
-        cancelAnimationFrame(this.rafId);
+        if (this.rafId) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
     }
 
-    /**
-     * La fonction de boucle principale appelée par requestAnimationFrame.
-     * @param {number} timestamp - Le temps actuel fourni par le navigateur.
-     */
-    loop(timestamp) {
+    frame(timestamp) {
         if (!this.isRunning) return;
 
-        // Calcul du temps écoulé depuis la dernière frame
-        let delta = timestamp - this.lastFrameTimeMs;
-        this.lastFrameTimeMs = timestamp;
+        this.dt = (timestamp - this.last) / 1000;
+        this.last = timestamp;
 
-        // Protection contre la "spirale de la mort" si le jeu lag trop (max 1s de rattrapage)
-        if (delta > 1000) delta = 1000;
+        // Protection contre la spirale de la mort (lag spike)
+        if (this.dt > 0.25) this.dt = 0.25;
 
-        this.accumulatedTime += delta;
+        this.accumulator += this.dt;
 
-        // Mise à jour de la logique par pas de temps fixe
-        while (this.accumulatedTime >= this.timeStep) {
-            this.updateFn(this.timeStep / 1000); // Conversion en secondes pour la physique
-            this.accumulatedTime -= this.timeStep;
+        while (this.accumulator >= this.step) {
+            this.update(this.step);
+            this.accumulator -= this.step;
         }
 
-        // Calcul de l'interpolation pour le rendu (entre 0 et 1)
-        // Permet un mouvement fluide même si le framerate écran != framerate logique
-        const alpha = this.accumulatedTime / this.timeStep;
+        // Interpolation (alpha) pour le rendu fluide
+        const alpha = this.accumulator / this.step;
+        this.render(alpha);
 
-        // Appel du rendu
-        this.renderFn(alpha);
-
-        // Planification de la prochaine frame
-        this.rafId = requestAnimationFrame(this.loop);
+        this.rafId = requestAnimationFrame(this.frame.bind(this));
     }
 }

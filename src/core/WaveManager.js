@@ -15,6 +15,8 @@ export class WaveManager {
         this.pendingSpawns = []; // Liste des ennemis à spawner {type, time}
 
         this.timeDisplay = document.getElementById('time-display');
+        this.bossHealthBarContainer = document.getElementById('boss-health-container'); // À créer
+        this.bossHealthBar = document.getElementById('boss-health-fill'); // À créer
     }
 
     update(dt) {
@@ -44,6 +46,9 @@ export class WaveManager {
                 this.pendingSpawns.splice(i, 1);
             }
         }
+
+        // 3. Update Boss Health UI
+        this.updateBossUI();
     }
 
     startWave(waveData) {
@@ -58,6 +63,27 @@ export class WaveManager {
                 });
                 currentDelay += enemyGroup.interval;
             }
+        }
+    }
+
+    updateBossUI() {
+        // Find Boss
+        const entities = this.entityManager.getEntities();
+        let boss = null;
+        for (const e of entities) {
+            if (e.active && e.hasComponent('BossComponent') && e.hasComponent('HealthComponent')) {
+                boss = e;
+                break;
+            }
+        }
+
+        if (boss && this.bossHealthBarContainer && this.bossHealthBar) {
+            this.bossHealthBarContainer.classList.remove('hidden');
+            const h = boss.getComponent('HealthComponent');
+            const percent = (h.current / h.max) * 100;
+            this.bossHealthBar.style.width = `${percent}%`;
+        } else if (this.bossHealthBarContainer) {
+            this.bossHealthBarContainer.classList.add('hidden');
         }
     }
 

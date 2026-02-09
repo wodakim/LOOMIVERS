@@ -3,7 +3,8 @@ export const GameState = {
     PLAYING: 'PLAYING',
     PAUSED: 'PAUSED',
     GAMEOVER: 'GAMEOVER',
-    SHOP: 'SHOP'
+    SHOP: 'SHOP',
+    VICTORY: 'VICTORY'
 };
 
 export class GameManager {
@@ -15,10 +16,15 @@ export class GameManager {
         this.menuScreen = document.getElementById('menu-screen');
         this.shopScreen = document.getElementById('shop-screen');
         this.gameOverScreen = document.getElementById('gameover-screen');
+        this.victoryScreen = document.getElementById('victory-screen');
+        this.pauseScreen = document.getElementById('pause-screen');
+
         this.finalScoreElement = document.getElementById('final-score');
+        this.victoryScoreElement = document.getElementById('victory-score');
 
         // Buttons
         this.initButtons();
+        this.initInput();
 
         // Initial State
         this.showScreen(this.menuScreen);
@@ -27,11 +33,13 @@ export class GameManager {
     initButtons() {
         const startBtn = document.getElementById('start-btn');
         const restartBtn = document.getElementById('restart-btn');
+        const victoryRestartBtn = document.getElementById('victory-restart-btn');
         const shopBtn = document.getElementById('shop-btn');
         const backBtn = document.getElementById('back-btn');
 
         if (startBtn) startBtn.addEventListener('click', () => this.startGame());
         if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
+        if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', () => this.restartGame());
 
         if (shopBtn) {
             shopBtn.addEventListener('click', () => {
@@ -55,6 +63,26 @@ export class GameManager {
                 });
             }
         });
+    }
+
+    initInput() {
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                this.togglePause();
+            }
+        });
+    }
+
+    togglePause() {
+        if (this.state === GameState.PLAYING) {
+            this.state = GameState.PAUSED;
+            this.game.stop(); // Stop loop
+            this.showScreen(this.pauseScreen, false); // false = don't hide game canvas
+        } else if (this.state === GameState.PAUSED) {
+            this.state = GameState.PLAYING;
+            this.pauseScreen.classList.add('hidden');
+            this.game.gameLoop.start(); // Resume loop
+        }
     }
 
     startGame() {
@@ -89,7 +117,6 @@ export class GameManager {
         } else {
             // Failed (Not enough gold or max level)
             console.log("Cannot buy upgrade: " + key);
-            // Visual feedback could be added here (shake animation, red flash)
         }
     }
 
@@ -126,16 +153,8 @@ export class GameManager {
         this.state = GameState.GAMEOVER;
         if (this.finalScoreElement) this.finalScoreElement.textContent = score;
 
-        // Conversion Score -> Gold et Sauvegarde
-        const data = this.game.saveSystem.load() || { gold: 0, highScore: 0 };
-        // Simple Economy: 10% of Score = Gold
-        const goldEarned = Math.floor(score * 0.1);
-
-        data.gold = (data.gold || 0) + goldEarned;
-        if (score > (data.highScore || 0)) data.highScore = score;
-
-        this.game.saveSystem.save(data);
-        console.log(`Game Over. Score: ${score}. Earned ${goldEarned} Gold. Total: ${data.gold}`);
+        this.processEndGame(score);
+        console.log(`Game Over. Score: ${score}.`);
 
         if (this.game.audioSystem) {
             this.game.audioSystem.playGameOver();
@@ -145,8 +164,35 @@ export class GameManager {
         this.game.stop();
     }
 
-    showScreen(screen) {
-        this.hideAllScreens();
+    triggerVictory(score) {
+        this.state = GameState.VICTORY;
+        if (this.victoryScoreElement) this.victoryScoreElement.textContent = score;
+
+        this.processEndGame(score);
+        console.log(`VICTORY! Score: ${score}.`);
+
+        if (this.game.audioSystem) {
+            this.game.audioSystem.playLevelUp(); // Joyful sound
+        }
+
+        this.showScreen(this.victoryScreen);
+        this.game.stop();
+    }
+
+    processEndGame(score) {
+        // Conversion Score -> Gold et Sauvegarde
+        const data = this.game.saveSystem.load() || { gold: 0, highScore: 0 };
+        // Simple Economy: 10% of Score = Gold
+        const goldEarned = Math.floor(score * 0.1);
+
+        data.gold = (data.gold || 0) + goldEarned;
+        if (score > (data.highScore || 0)) data.highScore = score;
+
+        this.game.saveSystem.save(data);
+    }
+
+    showScreen(screen, hideOthers = true) {
+        if (hideOthers) this.hideAllScreens();
         if (screen) screen.classList.remove('hidden');
     }
 
@@ -154,5 +200,7 @@ export class GameManager {
         if (this.menuScreen) this.menuScreen.classList.add('hidden');
         if (this.shopScreen) this.shopScreen.classList.add('hidden');
         if (this.gameOverScreen) this.gameOverScreen.classList.add('hidden');
+        if (this.victoryScreen) this.victoryScreen.classList.add('hidden');
+        if (this.pauseScreen) this.pauseScreen.classList.add('hidden');
     }
 }

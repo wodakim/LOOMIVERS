@@ -4,10 +4,18 @@ import { ProjectileComponent, WeaponComponent } from '../components/WeaponCompon
 import { ElementalComponent } from '../components/ElementalComponents.js';
 import { BossComponent } from '../components/BossComponent.js';
 
+/**
+ * Système gérant l'intelligence artificielle des ennemis.
+ * Implémente le "Chase", "Separation" (Boids), et les comportements spécifiques (Shooter, Charger, Boss).
+ */
 export class AISystem extends System {
+    /**
+     * @param {EntityManager} entityManager
+     * @param {PhysicsSystem} physicsSystem - Utilisé pour l'algo de voisinage (Grid)
+     */
     constructor(entityManager, physicsSystem) {
         super(entityManager);
-        this.physicsSystem = physicsSystem; // Pour le flocking/separation via la grille
+        this.physicsSystem = physicsSystem;
     }
 
     update(dt) {

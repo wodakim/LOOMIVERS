@@ -78,6 +78,18 @@
                 <button id="restart-btn" class="btn">TRY AGAIN</button>
             </div>
 
+            <div id="victory-screen" class="screen hidden">
+                <h1>VICTORY!</h1>
+                <p style="color: gold; font-size: 24px; margin-bottom: 20px;">BOSS DEFEATED</p>
+                <p>FINAL SCORE: <span id="victory-score">0</span></p>
+                <button id="victory-restart-btn" class="btn">PLAY AGAIN</button>
+            </div>
+
+            <div id="pause-screen" class="screen hidden" style="background: rgba(0,0,0,0.5);">
+                <h1>PAUSED</h1>
+                <p>Press 'P' or 'ESC' to Resume</p>
+            </div>
+
             <!-- HUD (Visible uniquement en jeu, géré par CSS si on veut, ou JS) -->
             <div id="health-bar-container">
                 <div id="health-bar"></div>
@@ -90,6 +102,10 @@
 
             <div id="score-display">SCORE: 00000</div>
             <div id="time-display">00:00</div>
+
+            <div id="boss-health-container" class="hidden">
+                <div id="boss-health-fill"></div>
+            </div>
         </div>
 
         <!-- Description Invisible pour l'Accessibilité et le SEO (Mise à jour par SEOSystem) -->

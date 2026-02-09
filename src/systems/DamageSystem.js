@@ -165,6 +165,15 @@ export class DamageSystem extends System {
     }
 
     killEntity(entity) {
+        // Trigger Victory if Boss
+        if (entity.hasComponent('BossComponent')) {
+            // Need access to GameManager.
+            // In a strict ECS, we might send an event or have GameManager check Entity state.
+            // Hack for POC: Global access or simple check in GameManager loop.
+            // Actually, we can check for 'boss' tag removal in GameManager or set a flag.
+            window.game.gameManager.triggerVictory(this.score);
+        }
+
         if (entity.hasComponent('ScoreComponent')) {
             const val = entity.getComponent('ScoreComponent').value;
             this.score += val;

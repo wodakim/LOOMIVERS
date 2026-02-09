@@ -31,9 +31,6 @@ export class EntityManager {
      */
     removeEntity(entity) {
         entity.active = false;
-        // Le nettoyage réel se fait souvent en fin de frame,
-        // mais pour simplifier ici on filtre ou on le fait immédiatement si l'array est géré.
-        // Pour des perfs optimales (tableau dense), on ferait un swap-and-pop.
     }
 
     /**
@@ -49,12 +46,23 @@ export class EntityManager {
      * @param {number} dt - Delta time.
      */
     update(dt) {
-        // Nettoyage des entités inactives (simplifié)
-        // Dans une version pro, on ferait ça plus intelligemment pour éviter le splice/filter coûteux
-        for (let i = this.entities.length - 1; i >= 0; i--) {
-            if (!this.entities[i].active) {
-                this.entityPool.release(this.entities[i]);
-                this.entities.splice(i, 1);
+        // Nettoyage des entités inactives (optimisé avec swap-and-pop pour éviter le splice lent)
+        let i = 0;
+        while (i < this.entities.length) {
+            const entity = this.entities[i];
+            if (!entity.active) {
+                // Retour au pool
+                this.entityPool.release(entity);
+
+                // Swap avec le dernier élément
+                const lastIndex = this.entities.length - 1;
+                if (i < lastIndex) {
+                    this.entities[i] = this.entities[lastIndex];
+                }
+                this.entities.pop();
+                // Ne pas incrémenter i, car on doit vérifier le nouvel élément à cette position
+            } else {
+                i++;
             }
         }
 
