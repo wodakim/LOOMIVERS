@@ -18,5 +18,11 @@ export const WavesConfig = [
             { type: 'tier1', count: 20, interval: 0.1 }, // Horde
             { type: 'tier2', count: 3, interval: 1 }
         ]
+    },
+    {
+        time: 60, // À 60 secondes (Boss)
+        enemies: [
+            { type: 'boss1', count: 1, interval: 0 }
+        ]
     }
 ];

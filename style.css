@@ -160,6 +160,27 @@ canvas {
     box-shadow: 0 0 20px var(--primary-color);
 }
 
+.btn-small {
+    padding: 5px 10px;
+    font-size: 16px;
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.shop-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 400px;
+    margin: 10px 0;
+    font-size: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
 .hidden {
     display: none !important;
 }

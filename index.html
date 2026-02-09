@@ -41,6 +41,35 @@
             <div id="menu-screen" class="screen">
                 <h1>GENESIS SURVIVOR</h1>
                 <button id="start-btn" class="btn">START GAME</button>
+                <button id="shop-btn" class="btn" style="margin-top: 10px; font-size: 18px;">SHOP (META)</button>
+            </div>
+
+            <div id="shop-screen" class="screen hidden">
+                <h1>SHOP</h1>
+                <p>GOLD: <span id="shop-gold" style="color: gold;">0</span></p>
+
+                <div class="shop-item">
+                    <span>HEALTH +20</span>
+                    <span id="lvl-health_boost">Lvl: 0/5</span>
+                    <button id="buy-health_boost" class="btn-small"><span id="cost-health_boost">100 G</span></button>
+                </div>
+                <div class="shop-item">
+                    <span>DAMAGE +10%</span>
+                    <span id="lvl-damage_boost">Lvl: 0/5</span>
+                    <button id="buy-damage_boost" class="btn-small"><span id="cost-damage_boost">200 G</span></button>
+                </div>
+                <div class="shop-item">
+                    <span>SPEED +10</span>
+                    <span id="lvl-speed_boost">Lvl: 0/3</span>
+                    <button id="buy-speed_boost" class="btn-small"><span id="cost-speed_boost">150 G</span></button>
+                </div>
+                <div class="shop-item">
+                    <span>WHIP WEAPON</span>
+                    <span id="lvl-unlock_whip">Lvl: 0/1</span>
+                    <button id="buy-unlock_whip" class="btn-small"><span id="cost-unlock_whip">500 G</span></button>
+                </div>
+
+                <button id="back-btn" class="btn" style="margin-top: 30px;">BACK</button>
             </div>
 
             <div id="gameover-screen" class="screen hidden">

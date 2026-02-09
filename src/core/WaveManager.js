@@ -1,6 +1,7 @@
 import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent } from '../components/Components.js';
 import { HealthComponent, ScoreComponent } from '../components/StatsComponents.js';
 import { ElementalComponent } from '../components/ElementalComponents.js';
+import { BossComponent } from '../components/BossComponent.js';
 import { WavesConfig } from '../data/WavesConfig.js';
 
 export class WaveManager {
@@ -121,6 +122,19 @@ export class WaveManager {
             r.width = 48;
             r.height = 48;
             c.radius = 24;
+        } else if (type === 'boss1') {
+            v.speed = 40;
+            h.current = h.max = 2000;
+            s.value = 1000;
+            r.color = '#ff0000'; // Rouge vif
+            r.width = 128;
+            r.height = 128;
+            c.radius = 64;
+
+            enemy.addComponent(new BossComponent());
+
+            // Le boss est élémentaire (FEU + HUILE = DANGEREUX)
+            enemy.getComponent('ElementalComponent').tags.add('fire');
         }
     }
 }

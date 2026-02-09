@@ -32,6 +32,8 @@ import { LevelComponent } from './components/ProgressionComponents.js';
 import { ElementalComponent } from './components/ElementalComponents.js';
 import { WaveManager } from './core/WaveManager.js';
 import { GameManager, GameState } from './core/GameManager.js';
+import { UpgradeManager } from './core/UpgradeManager.js';
+import { WeaponTypes } from './data/WeaponTypes.js';
 
 /**
  * Point d'entrée principal du moteur Genesis Survivor.
@@ -45,6 +47,11 @@ class Game {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
+        // Initialisation des cœurs (nécessaire avant GameManager pour SaveSystem)
+        this.saveSystem = new SaveSystem();
+        this.saveSystem.initIntegritySalt();
+        this.upgradeManager = new UpgradeManager(this.saveSystem);
+
         // Game Manager (State Machine)
         this.gameManager = new GameManager(this);
 
@@ -52,13 +59,10 @@ class Game {
     }
 
     initEngine() {
-        // Initialisation des cœurs
+        // Initialisation des cœurs (Reset)
         this.entityManager = new EntityManager();
         this.inputHandler = new InputHandler();
-        this.saveSystem = new SaveSystem();
-
-        // Sécurité : Initialisation du système de sauvegarde (Key generation)
-        this.saveSystem.initIntegritySalt();
+        // SaveSystem et UpgradeManager sont persistants, pas besoin de les recréer
 
         // Wave Manager (Director)
         this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
@@ -81,13 +85,14 @@ class Game {
         this.entityManager.registerSystem(this.inputSystem);
         this.entityManager.registerSystem(this.aiSystem);
         this.entityManager.registerSystem(this.combatSystem);
+        // Terraformation avant Movement pour appliquer les effets (ralentissement)
+        this.entityManager.registerSystem(this.terraformationSystem);
         this.entityManager.registerSystem(this.movementSystem);
         this.entityManager.registerSystem(this.physicsSystem);
         this.entityManager.registerSystem(this.particleSystem);
         this.entityManager.registerSystem(this.damageSystem);
         this.entityManager.registerSystem(this.progressionSystem);
         this.entityManager.registerSystem(this.alchemySystem);
-        this.entityManager.registerSystem(this.terraformationSystem);
 
         // Demo Terraformation : Ajouter des zones initiales
         this.terraformationSystem.addZone(200, 200, 100, 'water');
@@ -108,6 +113,19 @@ class Game {
 
     start() {
         this.initWorld();
+        // Appliquer les upgrades permanentes au joueur
+        const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
+        if (player) {
+            this.upgradeManager.applyPlayerStats(player);
+
+            // Check Weapon Unlocks
+            if (this.upgradeManager.upgrades['unlock_whip'].level > 0) {
+                const w = player.getComponent('WeaponComponent');
+                Object.assign(w, WeaponTypes.WHIP);
+            }
+            // Note: Aura would be a second weapon component or entity in a full system.
+            // Here, last unlock wins for main weapon slot.
+        }
         this.gameLoop.start();
     }
 

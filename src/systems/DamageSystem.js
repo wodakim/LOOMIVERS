@@ -85,6 +85,11 @@ export class DamageSystem extends System {
                     // Touché !
                     this.applyDamage(target, projectileData.damage);
 
+                    // Alchemy System Check
+                    if (this.alchemySystem) {
+                        this.alchemySystem.onProjectileHit(projectileEntity, target);
+                    }
+
                     // Détruire le projectile
                     this.entityManager.removeEntity(projectileEntity);
                     return; // Un projectile ne touche qu'une cible pour l'instant
@@ -137,9 +142,15 @@ export class DamageSystem extends System {
     }
 
     killEntity(entity) {
-        // Score
+        // Score & Gold (Score = Gold pour simplifier ici, ou ratio 1:1)
         if (entity.hasComponent('ScoreComponent')) {
-            this.score += entity.getComponent('ScoreComponent').value;
+            const val = entity.getComponent('ScoreComponent').value;
+            this.score += val;
+
+            // Sauvegarde de l'or (On ajoute au profil global via SaveSystem)
+            // Note: Pour les perfs, il vaut mieux le faire en fin de partie,
+            // mais ici on va le faire "à la volée" ou via GameManager lors du Game Over.
+            // Pour l'instant, on stocke juste dans le score courant.
         }
 
         // Spawn XP Gem
