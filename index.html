@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Genesis Survivor Engine (GSE-v1) - POC</title>
+    <meta name="description" content="Un moteur de jeu Survivor / Bullet Heaven haute performance sans dépendance.">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- JSON-LD SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Genesis Survivor Engine",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+</head>
+<body>
+
+    <!-- Structure Sémantique pour le SEO -->
+    <main id="game-container">
+        <header class="sr-only">
+            <h1>Genesis Survivor Game</h1>
+        </header>
+
+        <!-- Canvas Principal -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Overlay (HTML/CSS) -->
+        <div id="ui-layer">
+            <div id="health-bar-container">
+                <div id="health-bar"></div>
+            </div>
+            <div id="score-display">SCORE: 00000</div>
+        </div>
+
+        <!-- Description Invisible pour l'Accessibilité et le SEO (Mise à jour par SEOSystem) -->
+        <div id="game-description" class="visually-hidden" aria-live="polite">
+            Initialisation du moteur Genesis Survivor...
+        </div>
+    </main>
+
+    <!-- Point d'entrée JS (Module) -->
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
