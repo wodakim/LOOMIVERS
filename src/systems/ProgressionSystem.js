@@ -77,17 +77,38 @@ export class ProgressionSystem extends System {
     collect(gem, player) {
         const collectable = gem.getComponent('CollectableComponent');
         const level = player.getComponent('LevelComponent');
+        const health = player.getComponent('HealthComponent');
 
         if (collectable.type === 'xp' && level) {
             level.currentXP += collectable.value;
-
-            // Check Level Up
             if (level.currentXP >= level.nextLevelXP) {
                 this.triggerLevelUp(player, level);
             }
+        } else if (collectable.type === 'health' && health) {
+            health.current = Math.min(health.current + collectable.value, health.max);
+            if (this.audioSystem) this.audioSystem.playTone(400, 'sine', 0.2, 0.5); // Heal sound
+        } else if (collectable.type === 'magnet') {
+            this.triggerMagnetEffect(player);
+            if (this.audioSystem) this.audioSystem.playTone(800, 'sine', 0.5, 0.5);
         }
 
         this.entityManager.removeEntity(gem);
+    }
+
+    triggerMagnetEffect(player) {
+        const entities = this.entityManager.getEntities();
+        for (const entity of entities) {
+            if (entity.active && entity.hasComponent('CollectableComponent')) {
+                // Force magnet range to infinite temporarily logic?
+                // Or just teleport gems close?
+                // Better: Set a flag or huge range on gems
+                const c = entity.getComponent('CollectableComponent');
+                if (c.type === 'xp') {
+                    c.magnetRange = 2000; // Pull everything on screen
+                    c.magnetSpeed = 800; // Fast
+                }
+            }
+        }
     }
 
     triggerLevelUp(player, level) {
@@ -105,14 +126,14 @@ export class ProgressionSystem extends System {
         // Dans une version complète, on afficherait l'UI et mettrait le jeu en pause
         const weapon = player.getComponent('WeaponComponent');
         if (weapon) {
-            weapon.damage += 5;
-            weapon.fireRate += 0.2;
+            weapon.damage += 1; // Was 5 (Nerf)
+            weapon.fireRate += 0.05; // Was 0.2 (Nerf)
             console.log('Weapon Upgraded!');
         }
 
         const health = player.getComponent('HealthComponent');
         if (health) {
-            health.max += 20;
+            health.max += 5; // Was 20 (Nerf)
             health.current = health.max; // Soin complet
         }
     }
@@ -137,5 +158,34 @@ export class ProgressionSystem extends System {
         r.height = 6;
         r.color = '#00ff00'; // Vert XP
         r.layer = 2; // Au sol
+    }
+
+    spawnPickup(x, y, type) {
+        const pickup = this.entityManager.createEntity();
+
+        pickup.addComponent(new TransformComponent());
+        const t = pickup.getComponent('TransformComponent');
+        t.x = x;
+        t.y = y;
+
+        pickup.addComponent(new CollectableComponent());
+        const c = pickup.getComponent('CollectableComponent');
+        c.type = type;
+        c.magnetRange = 50; // Pickups are harder to get
+        c.magnetSpeed = 100;
+
+        pickup.addComponent(new RenderComponent());
+        const r = pickup.getComponent('RenderComponent');
+        r.shape = 'circle';
+        r.width = 12;
+        r.height = 12;
+        r.layer = 3;
+
+        if (type === 'health') {
+            c.value = 30;
+            r.color = '#ff0000'; // Red Heart
+        } else if (type === 'magnet') {
+            r.color = '#0000ff'; // Blue Magnet
+        }
     }
 }

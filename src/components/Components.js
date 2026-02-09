@@ -66,6 +66,31 @@ export class InputComponent extends Component {
     }
 }
 
+export class DashComponent extends Component {
+    constructor() {
+        super();
+        this.duration = 0.2; // Durée du dash (s)
+        this.cooldown = 1.0; // Temps avant réutilisation (s)
+        this.speedMultiplier = 3.0; // Boost de vitesse
+
+        // État interne
+        this.isDashing = false;
+        this.dashTimer = 0;
+        this.cooldownTimer = 0;
+        this.dashVector = { x: 0, y: 0 };
+    }
+
+    reset() {
+        this.isDashing = false;
+        this.dashTimer = 0;
+        this.cooldownTimer = 0;
+        this.dashVector = { x: 0, y: 0 };
+        this.duration = 0.2;
+        this.cooldown = 1.0;
+        this.speedMultiplier = 3.0;
+    }
+}
+
 export class AIComponent extends Component {
     constructor() {
         super();

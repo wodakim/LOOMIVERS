@@ -3,7 +3,7 @@ import { Component } from '../ecs/Component.js';
 export class CollectableComponent extends Component {
     constructor() {
         super();
-        this.type = 'xp'; // 'xp', 'health', 'coin'
+        this.type = 'xp'; // 'xp', 'health', 'magnet', 'nuke'
         this.value = 1;
         this.magnetRange = 100; // Rayon d'attraction
         this.magnetSpeed = 300; // Vitesse d'attraction

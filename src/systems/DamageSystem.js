@@ -1,5 +1,5 @@
 import { System } from '../ecs/System.js';
-import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent } from '../components/Components.js';
+import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, DashComponent } from '../components/Components.js';
 import { HealthComponent, FloatingTextComponent, ScoreComponent } from '../components/StatsComponents.js';
 import { ProjectileComponent } from '../components/WeaponComponents.js';
 
@@ -86,6 +86,12 @@ export class DamageSystem extends System {
 
         if (!player || !player.active) return;
 
+        // Check DASH Invulnerability
+        if (player.hasComponent('DashComponent')) {
+            const dash = player.getComponent('DashComponent');
+            if (dash.isDashing) return; // Invincible while dashing
+        }
+
         // Check cooldown
         if (this.contactDamageCooldowns.has(player.id)) return;
 
@@ -155,6 +161,11 @@ export class DamageSystem extends System {
             if (!isValidTarget) continue;
 
             if (target.hasComponent('ColliderComponent') && target.hasComponent('HealthComponent') && target.hasComponent('TransformComponent')) {
+                // Dash Invincibility for Projectiles (optional)
+                if (target.hasComponent('DashComponent') && target.getComponent('DashComponent').isDashing) {
+                    continue; // Dodge bullet
+                }
+
                 const targetTransform = target.getComponent('TransformComponent');
                 const targetCollider = target.getComponent('ColliderComponent');
 
@@ -247,10 +258,19 @@ export class DamageSystem extends System {
             this.score += val;
         }
 
+        // Spawn Drops (XP or Pickups)
         if (this.progressionSystem && entity.hasComponent('TransformComponent')) {
             const t = entity.getComponent('TransformComponent');
-            const xpValue = entity.hasComponent('ScoreComponent') ? Math.ceil(entity.getComponent('ScoreComponent').value / 5) : 1;
-            this.progressionSystem.spawnXPGem(t.x, t.y, xpValue);
+
+            // 5% chance for a utility pickup
+            if (Math.random() < 0.05) {
+                // 50/50 Health or Magnet
+                const type = Math.random() < 0.5 ? 'health' : 'magnet';
+                this.progressionSystem.spawnPickup(t.x, t.y, type);
+            } else {
+                const xpValue = entity.hasComponent('ScoreComponent') ? Math.ceil(entity.getComponent('ScoreComponent').value / 5) : 1;
+                this.progressionSystem.spawnXPGem(t.x, t.y, xpValue);
+            }
         }
 
         this.entityManager.removeEntity(entity);

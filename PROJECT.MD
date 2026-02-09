@@ -1,7 +1,7 @@
 # PROJET GENESIS SURVIVOR ENGINE (GSE-v1)
 
 ## ÉTAT DU PROJET
-**Dernière mise à jour :** Phase "Final Polish" v1.
+**Dernière mise à jour :** Phase V2-A (Mobile & Core Gameplay).
 **Moteur :** ECS Custom (Vanilla JS).
 **Dépendances :** Aucune (Zero Dependency).
 
@@ -18,11 +18,13 @@ Ces fonctionnalités sont implémentées et vérifiées.
     *   [x] Rendu : Canvas API 2D optimisé + Offscreen Canvas (Terraformation).
 
 *   **Gameplay Core**
-    *   [x] Mouvement Joueur (Clavier).
+    *   [x] Mouvement Joueur (Clavier + Joystick Mobile).
     *   [x] Tir Automatique (Pistolet, Fouet, Aura).
     *   [x] Vagues d'ennemis scriptées (5 minutes + Boss).
     *   [x] Types d'ennemis : Basic (Chase), Shooter (Distance), Charger (Dash), Boss (PV élevés).
     *   [x] Progression : XP, Level Up, Ramassage magnétique.
+    *   [x] **Dash Actif :** Compétence d'esquive (i-frames) activée par Espace/Bouton Mobile.
+    *   [x] **Pickups Utilitaires :** Potions de soin et Aimants (Drops rares).
 
 *   **Systèmes Avancés**
     *   [x] **Alchimie :** Interactions (Feu + Huile = Explosion, Eau + Électricité = Stun).
@@ -34,23 +36,15 @@ Ces fonctionnalités sont implémentées et vérifiées.
     *   [x] Menus : Start, Shop, Game Over, Victory, Pause.
     *   [x] Feedback : Hit Flash, Textes flottants (Critiques rouges), Timer.
     *   [x] SEO : Structure sémantique HTML5 + JSON-LD.
+    *   [x] **Mobile :** Contrôles tactiles et Responsive UI.
 
 ---
 
 ## 2. ROADMAP V2 (EN DÉVELOPPEMENT)
 Les éléments marqués d'un triangle rouge 🔺 sont à implémenter ou à tester.
 
-### A. PRIORITÉ ABSOLUE (FIX & MOBILE)
-*   **Correction Critique**
-    *   🔺 **Vulnérabilité Joueur :** Le héros est actuellement invincible aux contacts directs. Implémenter "Body Damage" (Collision Ennemi -> Joueur).
-*   **Support Mobile (Responsive)**
-    *   🔺 **Contrôles Tactiles :** Joystick virtuel (Déplacement) et Boutons (Dash, Pause, Shop).
-    *   🔺 **UI Responsive :** Adapter la taille des textes et boutons pour petits écrans.
-
-### B. GAMEPLAY ET CONTENU
+### B. GAMEPLAY ET CONTENU (SUITE)
 *   **Nouvelles Mécaniques**
-    *   🔺 **Dash Actif :** Compétence d'esquive (i-frames) sur touche Espace/Bouton Mobile.
-    *   🔺 **Pickups Utilitaires :** Potions de soin, Aimants, Bombes (Loot rare).
     *   🔺 **Armes Secondaires (Passives) :** Mines, Tourelles, Orbes rotatives.
 *   **Bestiaire Étendu**
     *   🔺 **Ennemis Support :** Healers (Soigneurs) et Buffers (Boost vitesse).

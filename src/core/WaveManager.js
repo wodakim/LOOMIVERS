@@ -15,8 +15,8 @@ export class WaveManager {
         this.pendingSpawns = []; // Liste des ennemis à spawner {type, time}
 
         this.timeDisplay = document.getElementById('time-display');
-        this.bossHealthBarContainer = document.getElementById('boss-health-container'); // À créer
-        this.bossHealthBar = document.getElementById('boss-health-fill'); // À créer
+        this.bossHealthBarContainer = document.getElementById('boss-health-container');
+        this.bossHealthBar = document.getElementById('boss-health-fill');
     }
 
     update(dt) {
@@ -29,14 +29,14 @@ export class WaveManager {
             this.timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        // 1. Vérifier si une nouvelle vague doit démarrer
+        // 1. Scripted Wave Logic
         const nextWave = WavesConfig[this.currentWaveIndex + 1];
         if (nextWave && this.currentTime >= nextWave.time) {
             this.startWave(nextWave);
             this.currentWaveIndex++;
         }
 
-        // 2. Gérer les spawns en attente
+        // 2. Spawn Queue
         for (let i = this.pendingSpawns.length - 1; i >= 0; i--) {
             const spawn = this.pendingSpawns[i];
             spawn.delay -= dt;
@@ -47,8 +47,35 @@ export class WaveManager {
             }
         }
 
-        // 3. Update Boss Health UI
+        // 3. Filler Logic (Ensure constant presence)
+        this.checkFiller();
+
+        // 4. Update Boss Health UI
         this.updateBossUI();
+    }
+
+    checkFiller() {
+        const entities = this.entityManager.getEntities();
+
+        // Count Enemies
+        let enemyCount = 0;
+        let hasBoss = false;
+
+        for (const e of entities) {
+            if (e.tags.has('enemy') && e.active) {
+                enemyCount++;
+                if (e.hasComponent('BossComponent')) hasBoss = true;
+            }
+        }
+
+        // Filler Conditions: No Boss, Low Enemy Count
+        // Don't spawn filler if a huge wave is currently spawning (pendingSpawns > 0) to avoid lag
+        if (!hasBoss && enemyCount < 5 && this.pendingSpawns.length === 0) {
+            // Spawn a small group of 3 weak enemies immediately
+            for (let i = 0; i < 3; i++) {
+                this.spawnEnemy('tier1');
+            }
+        }
     }
 
     startWave(waveData) {
@@ -139,7 +166,7 @@ export class WaveManager {
         // Config selon le Type
         if (type === 'tier1') {
             v.speed = 80 + Math.random() * 40;
-            h.current = h.max = 30;
+            h.current = h.max = 50; // BUFFED from 30
             s.value = 10;
             r.color = '#ff3333'; // Rouge
 
@@ -151,7 +178,7 @@ export class WaveManager {
 
         } else if (type === 'tier2') {
             v.speed = 60;
-            h.current = h.max = 100;
+            h.current = h.max = 150; // BUFFED from 100
             s.value = 50;
             r.color = '#aa00aa'; // Violet
             r.width = 48;
@@ -159,7 +186,7 @@ export class WaveManager {
             c.radius = 24;
         } else if (type === 'boss1') {
             v.speed = 40;
-            h.current = h.max = 2000;
+            h.current = h.max = 5000; // BUFFED from 2000
             s.value = 1000;
             r.color = '#ff0000'; // Rouge vif
             r.width = 128;
@@ -173,7 +200,7 @@ export class WaveManager {
 
         } else if (type === 'shooter') {
             v.speed = 70;
-            h.current = h.max = 50;
+            h.current = h.max = 80; // BUFFED from 50
             s.value = 30;
             r.color = '#ff00ff'; // Magenta
             r.shape = 'circle'; // Distinct shape
@@ -184,7 +211,7 @@ export class WaveManager {
 
         } else if (type === 'charger') {
             v.speed = 50; // Base speed slow
-            h.current = h.max = 80;
+            h.current = h.max = 120; // BUFFED from 80
             s.value = 40;
             r.color = '#ffaa00'; // Orange
             r.width = 40;

@@ -11,7 +11,8 @@ import {
     RenderComponent,
     InputComponent,
     AIComponent,
-    ColliderComponent
+    ColliderComponent,
+    DashComponent
 } from './components/Components.js';
 
 // Systems
@@ -183,11 +184,14 @@ class Game {
 
         hero.addComponent(new InputComponent());
 
+        // Dash
+        hero.addComponent(new DashComponent());
+
         // Ajout de l'arme par défaut
         hero.addComponent(new WeaponComponent());
         const weapon = hero.getComponent('WeaponComponent');
-        weapon.fireRate = 2; // 2 tirs/sec
-        weapon.damage = 25;
+        weapon.fireRate = 1.5; // Was 2 (Nerf)
+        weapon.damage = 15; // Was 25 (Nerf)
         weapon.range = 400;
 
         // Le Héro tire du FEU

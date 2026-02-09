@@ -57,18 +57,30 @@ export class InputHandler {
         }
 
         if (pauseBtn) {
-            pauseBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                // Toggle pause via event emission simulation (handled in GameManager update loop or separate check)
-                // For direct input polling:
-                this.actions.pause = true;
-                // Need to reset it quickly or handle toggle logic elsewhere
-                setTimeout(() => this.actions.pause = false, 100);
+            // Utiliser 'click' pour le bouton pause pour qu'il marche même si le jeu est en pause
+            // (car les events tactiles peuvent être interceptés ou le loop arrêté, mais click est UI standard)
+            // Cependant, sur mobile, touchstart est mieux pour la réactivité.
+            // Le problème est que si le jeu est en PAUSE, le GameManager ne check peut-être plus les inputs.
+            // On va dispatcher un event global que GameManager écoute.
 
-                // Direct call fallback if needed (GameManager listens to keydown usually)
+            pauseBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // On simule l'appui sur 'P' ou on appelle directement si on avait accès (mais ici inputhandler est isolé)
+                // Le mieux est de dispatcher un event custom ou clavier.
                 const event = new KeyboardEvent('keydown', { key: 'P' });
                 window.dispatchEvent(event);
             });
+
+            // Touchstart pour feedback visuel
+            pauseBtn.addEventListener('touchstart', (e) => {
+                pauseBtn.style.transform = 'scale(0.9)';
+            }, {passive: true});
+
+            pauseBtn.addEventListener('touchend', (e) => {
+                pauseBtn.style.transform = 'scale(1)';
+            }, {passive: true});
         }
     }
 
