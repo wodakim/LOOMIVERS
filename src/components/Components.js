@@ -116,6 +116,25 @@ export class AIComponent extends Component {
     }
 }
 
+export class SupportComponent extends Component {
+    constructor() {
+        super();
+        this.type = 'healer'; // 'healer' | 'buffer'
+        this.range = 200;
+        this.cooldown = 2.0;
+        this.timer = 0;
+        this.effectStrength = 10; // Heal amount or Speed multiplier %
+    }
+
+    reset() {
+        this.type = 'healer';
+        this.range = 200;
+        this.cooldown = 2.0;
+        this.timer = 0;
+        this.effectStrength = 10;
+    }
+}
+
 export class ColliderComponent extends Component {
     constructor() {
         super();

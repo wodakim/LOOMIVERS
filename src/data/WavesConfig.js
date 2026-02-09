@@ -74,6 +74,7 @@ export const WavesConfig = [
         time: 180,
         enemies: [
             { type: 'tier1', count: 30, interval: 0.2 }, // Horde dense
+            { type: 'healer', count: 2, interval: 5.0 }, // Support intro
             { type: 'tier2', count: 3, interval: 5.0 }
         ]
     },
@@ -81,6 +82,7 @@ export const WavesConfig = [
         time: 210,
         enemies: [
             { type: 'shooter', count: 10, interval: 1.0 }, // Bullet Hell check
+            { type: 'buffer', count: 2, interval: 10.0 }, // Support intro
             { type: 'charger', count: 5, interval: 2.0 }
         ]
     },
@@ -90,6 +92,7 @@ export const WavesConfig = [
         time: 240,
         enemies: [
             { type: 'tier2', count: 10, interval: 2.0 }, // Armée d'Elites
+            { type: 'healer', count: 5, interval: 3.0 },
             { type: 'tier1', count: 40, interval: 0.1 }
         ]
     },

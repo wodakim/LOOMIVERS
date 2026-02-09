@@ -1,18 +1,11 @@
 import { System } from '../ecs/System.js';
-import { TransformComponent, AIComponent, VelocityComponent, RenderComponent, ColliderComponent } from '../components/Components.js';
+import { TransformComponent, AIComponent, VelocityComponent, RenderComponent, ColliderComponent, SupportComponent } from '../components/Components.js';
 import { ProjectileComponent, WeaponComponent } from '../components/WeaponComponents.js';
 import { ElementalComponent } from '../components/ElementalComponents.js';
 import { BossComponent } from '../components/BossComponent.js';
+import { HealthComponent } from '../components/StatsComponents.js';
 
-/**
- * Système gérant l'intelligence artificielle des ennemis.
- * Implémente le "Chase", "Separation" (Boids), et les comportements spécifiques (Shooter, Charger, Boss).
- */
 export class AISystem extends System {
-    /**
-     * @param {EntityManager} entityManager
-     * @param {PhysicsSystem} physicsSystem - Utilisé pour l'algo de voisinage (Grid)
-     */
     constructor(entityManager, physicsSystem) {
         super(entityManager);
         this.physicsSystem = physicsSystem;
@@ -21,7 +14,6 @@ export class AISystem extends System {
     update(dt) {
         const entities = this.entityManager.getEntities();
 
-        // Trouver la cible (Joueur)
         let targetEntity = null;
         for (const entity of entities) {
             if (entity.tags.has('player')) {
@@ -44,23 +36,95 @@ export class AISystem extends System {
                     continue;
                 }
 
+                // Support Logic
+                if (entity.hasComponent('SupportComponent')) {
+                    this.handleSupport(entity, dt);
+                    // Support enemies also move (slow chase or flee)
+                    this.handleChase(entity, targetTransform, dt, 0.5); // Slower
+                    continue;
+                }
+
                 if (ai.behavior === 'shooter') {
                     this.handleShooter(entity, targetTransform, dt, ai);
                 } else if (ai.behavior === 'charger') {
                     this.handleCharger(entity, targetTransform, dt, ai);
                 } else {
-                    // Default Chase
                     this.handleChase(entity, targetTransform, dt);
                 }
             }
         }
     }
 
-    handleChase(entity, targetTransform, dt) {
+    handleSupport(entity, dt) {
+        const support = entity.getComponent('SupportComponent');
+        const transform = entity.getComponent('TransformComponent');
+
+        if (support.timer > 0) {
+            support.timer -= dt;
+            return;
+        }
+
+        const neighbors = this.getNeighbors(entity, transform);
+        let actionTriggered = false;
+
+        for (const neighbor of neighbors) {
+            if (neighbor === entity) continue;
+
+            const nTransform = neighbor.getComponent('TransformComponent');
+            const dx = nTransform.x - transform.x;
+            const dy = nTransform.y - transform.y;
+            const distSq = dx*dx + dy*dy;
+
+            if (distSq < support.range * support.range) {
+                if (support.type === 'healer') {
+                    // Heal wounded allies
+                    if (neighbor.hasComponent('HealthComponent')) {
+                        const h = neighbor.getComponent('HealthComponent');
+                        if (h.current < h.max) {
+                            h.current = Math.min(h.current + support.effectStrength, h.max);
+                            // Visual beam
+                            this.spawnBeam(transform, nTransform, '#00ff00');
+                            actionTriggered = true;
+                        }
+                    }
+                } else if (support.type === 'buffer') {
+                    // Buff speed
+                    if (neighbor.hasComponent('VelocityComponent')) {
+                        const v = neighbor.getComponent('VelocityComponent');
+                        // Temp boost (simple logic: add speed if not already too fast)
+                        // A proper system would use a BuffComponent with duration
+                        // For POC: Instant push
+                        v.vx *= 1.2;
+                        v.vy *= 1.2;
+                        this.spawnBeam(transform, nTransform, '#00ffff');
+                        actionTriggered = true;
+                    }
+                }
+            }
+        }
+
+        if (actionTriggered) {
+            support.timer = support.cooldown;
+        }
+    }
+
+    spawnBeam(start, end, color) {
+        const p = this.entityManager.createEntity();
+        p.addComponent(new TransformComponent());
+        p.getComponent('TransformComponent').x = end.x;
+        p.getComponent('TransformComponent').y = end.y;
+        p.addComponent(new RenderComponent());
+        p.getComponent('RenderComponent').color = color;
+        p.getComponent('RenderComponent').shape = 'circle';
+        p.getComponent('RenderComponent').width = 10;
+        p.getComponent('RenderComponent').height = 10;
+        // Should ideally be removed next frame or use ParticleSystem
+    }
+
+    handleChase(entity, targetTransform, dt, speedMod = 1.0) {
         const transform = entity.getComponent('TransformComponent');
         const velocity = entity.getComponent('VelocityComponent');
 
-        // 1. Vecteur vers la Cible (Chase)
         const dx = targetTransform.x - transform.x;
         const dy = targetTransform.y - transform.y;
         let dist = Math.sqrt(dx * dx + dy * dy);
@@ -73,24 +137,21 @@ export class AISystem extends System {
             dirY = dy / dist;
         }
 
-        // 2. Séparation
         const separationForce = this.calculateSeparation(entity, transform);
 
-        // 3. Synthèse
         const chaseWeight = 1.0;
         const separationWeight = 2.0;
 
         let finalDx = (dirX * chaseWeight) + (separationForce.x * separationWeight);
         let finalDy = (dirY * chaseWeight) + (separationForce.y * separationWeight);
 
-        // Normalisation
         const finalDist = Math.sqrt(finalDx*finalDx + finalDy*finalDy);
         if (finalDist > 0) {
             finalDx /= finalDist;
             finalDy /= finalDist;
         }
 
-        const speedFactor = 0.8;
+        const speedFactor = 0.8 * speedMod;
         velocity.vx = finalDx * velocity.speed * speedFactor;
         velocity.vy = finalDy * velocity.speed * speedFactor;
     }
@@ -147,26 +208,30 @@ export class AISystem extends System {
 
     shooterFire(source, targetTransform) {
         const sourceTransform = source.getComponent('TransformComponent');
+        this.spawnProjectile(sourceTransform.x, sourceTransform.y, targetTransform.x, targetTransform.y, source);
+    }
 
-        // Spawn Enemy Projectile
+    spawnProjectile(x, y, targetX, targetY, source) {
         const projectile = this.entityManager.createEntity();
         projectile.tags.add('projectile');
-        projectile.tags.add('enemy_projectile'); // Important for collision filtering
+        projectile.tags.add('enemy_projectile');
 
         projectile.addComponent(new TransformComponent());
         const t = projectile.getComponent('TransformComponent');
-        t.x = sourceTransform.x;
-        t.y = sourceTransform.y;
+        t.x = x;
+        t.y = y;
 
-        const dx = targetTransform.x - t.x;
-        const dy = targetTransform.y - t.y;
+        const dx = targetX - x;
+        const dy = targetY - y;
         const dist = Math.sqrt(dx*dx + dy*dy);
 
         projectile.addComponent(new VelocityComponent());
         const v = projectile.getComponent('VelocityComponent');
         const speed = 200;
-        v.vx = (dx/dist) * speed;
-        v.vy = (dy/dist) * speed;
+        if (dist > 0) {
+            v.vx = (dx/dist) * speed;
+            v.vy = (dy/dist) * speed;
+        }
 
         projectile.addComponent(new RenderComponent());
         const r = projectile.getComponent('RenderComponent');
@@ -186,7 +251,7 @@ export class AISystem extends System {
         const c = projectile.getComponent('ColliderComponent');
         c.radius = 4;
         c.isTrigger = true;
-        c.tags = ['player']; // Hits player
+        c.tags = ['player'];
     }
 
     handleCharger(entity, targetTransform, dt, ai) {
@@ -195,46 +260,33 @@ export class AISystem extends System {
         const render = entity.getComponent('RenderComponent');
 
         if (ai.isCharging) {
-            // Dashing state
             ai.chargeTimer -= dt;
             if (ai.chargeTimer <= 0) {
-                // End dash
                 ai.isCharging = false;
                 velocity.vx = 0;
                 velocity.vy = 0;
-                ai.chargeTimer = 2.0; // Cooldown
-                if (render) render.color = '#ffaa00'; // Reset color (Orange)
+                ai.chargeTimer = 2.0;
+                if (render) render.color = '#ffaa00';
             }
-            // While charging, velocity is locked (high speed), no steering
         } else {
-            // Prepare state
             ai.chargeTimer -= dt;
-
-            // Look at player
             const dx = targetTransform.x - transform.x;
             const dy = targetTransform.y - transform.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
 
             if (ai.chargeTimer <= 0 && dist < 400) {
-                // Start Charge
                 ai.isCharging = true;
-                ai.chargeTimer = 0.5; // Dash duration
-
-                // Dash vector
-                const speed = velocity.speed * 4.0; // 4x speed
+                ai.chargeTimer = 0.5;
+                const speed = velocity.speed * 4.0;
                 velocity.vx = (dx/dist) * speed;
                 velocity.vy = (dy/dist) * speed;
-
-                if (render) render.color = '#ffff00'; // Flash Yellow warning
+                if (render) render.color = '#ffff00';
             } else {
-                // Normal slow chase / orientation
                 const chaseSpeed = velocity.speed * 0.5;
                 if (dist > 0) {
                     velocity.vx = (dx/dist) * chaseSpeed;
                     velocity.vy = (dy/dist) * chaseSpeed;
                 }
-
-                // Separation
                 const sep = this.calculateSeparation(entity, transform);
                 velocity.vx += sep.x * velocity.speed;
                 velocity.vy += sep.y * velocity.speed;
@@ -276,7 +328,6 @@ export class AISystem extends System {
     }
 
     getNeighbors(entity, transform) {
-        // Utilisation de la grille du PhysicsSystem
         if (!this.physicsSystem || !this.physicsSystem.grid) return [];
 
         const cellSize = this.physicsSystem.cellSize;
@@ -301,9 +352,19 @@ export class AISystem extends System {
     }
 
     handleBoss(entity, targetTransform, dt) {
+        const boss = entity.getComponent('BossComponent');
         const transform = entity.getComponent('TransformComponent');
         const velocity = entity.getComponent('VelocityComponent');
+        const health = entity.getComponent('HealthComponent');
 
+        // Check Phase Change
+        if (boss.phase === 1 && health.current < health.max * 0.5) {
+            boss.phase = 2;
+            boss.attackCooldown = 0.1; // Enrage speed
+            console.log("BOSS PHASE 2");
+        }
+
+        // Movement (Always Chase Slow)
         const dx = targetTransform.x - transform.x;
         const dy = targetTransform.y - transform.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -312,5 +373,59 @@ export class AISystem extends System {
             velocity.vx = (dx / dist) * velocity.speed;
             velocity.vy = (dy / dist) * velocity.speed;
         }
+
+        // Attack Logic
+        boss.patternTimer -= dt;
+        if (boss.patternTimer <= 0) {
+            // Switch pattern
+            boss.currentPattern = boss.currentPattern === 'spiral' ? 'ring' : 'spiral';
+            boss.patternTimer = boss.patternDuration;
+        }
+
+        boss.attackCooldown -= dt;
+        if (boss.attackCooldown <= 0) {
+            if (boss.currentPattern === 'spiral') {
+                this.fireSpiralPattern(entity, boss);
+            } else {
+                this.fireRingPattern(entity, boss);
+            }
+            boss.attackCooldown = boss.phase === 2 ? 0.1 : 0.2;
+        }
+    }
+
+    fireSpiralPattern(entity, boss) {
+        const transform = entity.getComponent('TransformComponent');
+        const branches = boss.phase === 2 ? 4 : 2; // More branches in phase 2
+
+        for (let i = 0; i < branches; i++) {
+            const angle = boss.angleOffset + (i * (Math.PI * 2 / branches));
+            const targetX = transform.x + Math.cos(angle) * 100;
+            const targetY = transform.y + Math.sin(angle) * 100;
+
+            this.spawnProjectile(transform.x, transform.y, targetX, targetY, entity);
+        }
+
+        boss.angleOffset += 0.2; // Rotate
+    }
+
+    fireRingPattern(entity, boss) {
+        // Fire expanding ring occasionally
+        // Since this is called every 0.2s, a full ring is too much.
+        // Let's fire a rapid burst in a random direction or a dense wave.
+        // For Bullet Hell: Fire a ring of 10 bullets
+        const transform = entity.getComponent('TransformComponent');
+        const count = 12;
+
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + boss.angleOffset;
+            const targetX = transform.x + Math.cos(angle) * 100;
+            const targetY = transform.y + Math.sin(angle) * 100;
+
+            this.spawnProjectile(transform.x, transform.y, targetX, targetY, entity);
+        }
+        boss.angleOffset += 0.05; // Slow rotation
+
+        // Reset cooldown longer for ring to avoid lag
+        boss.attackCooldown = 1.0;
     }
 }

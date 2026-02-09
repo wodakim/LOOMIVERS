@@ -1,7 +1,7 @@
 # PROJET GENESIS SURVIVOR ENGINE (GSE-v1)
 
 ## ÉTAT DU PROJET
-**Dernière mise à jour :** Phase V2-A (Mobile & Core Gameplay).
+**Dernière mise à jour :** Phase V2-B (Support & Bullet Hell).
 **Moteur :** ECS Custom (Vanilla JS).
 **Dépendances :** Aucune (Zero Dependency).
 
@@ -25,6 +25,8 @@ Ces fonctionnalités sont implémentées et vérifiées.
     *   [x] Progression : XP, Level Up, Ramassage magnétique.
     *   [x] **Dash Actif :** Compétence d'esquive (i-frames) activée par Espace/Bouton Mobile.
     *   [x] **Pickups Utilitaires :** Potions de soin et Aimants (Drops rares).
+    *   [x] **Bestiaire Support :** Healers (Soigneurs) et Buffers (Boost vitesse).
+    *   [x] **Boss "Bullet Hell" :** Patterns Spirales et Anneaux en Phase 2.
 
 *   **Systèmes Avancés**
     *   [x] **Alchimie :** Interactions (Feu + Huile = Explosion, Eau + Électricité = Stun).
@@ -37,6 +39,7 @@ Ces fonctionnalités sont implémentées et vérifiées.
     *   [x] Feedback : Hit Flash, Textes flottants (Critiques rouges), Timer.
     *   [x] SEO : Structure sémantique HTML5 + JSON-LD.
     *   [x] **Mobile :** Contrôles tactiles et Responsive UI.
+    *   [x] **Equilibrage :** Nerf Stats Joueur, Buff PV Ennemis, Spawn constant (Filler).
 
 ---
 
@@ -46,9 +49,6 @@ Les éléments marqués d'un triangle rouge 🔺 sont à implémenter ou à test
 ### B. GAMEPLAY ET CONTENU (SUITE)
 *   **Nouvelles Mécaniques**
     *   🔺 **Armes Secondaires (Passives) :** Mines, Tourelles, Orbes rotatives.
-*   **Bestiaire Étendu**
-    *   🔺 **Ennemis Support :** Healers (Soigneurs) et Buffers (Boost vitesse).
-    *   🔺 **Boss "Bullet Hell" :** Patterns de tir géométriques complexes.
 
 ### C. HUB & METAGAME (NOUVEAU SCOPE)
 *   **Le HUB (Quartier Général)**

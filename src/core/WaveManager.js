@@ -1,4 +1,4 @@
-import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent } from '../components/Components.js';
+import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent, SupportComponent } from '../components/Components.js';
 import { HealthComponent, ScoreComponent } from '../components/StatsComponents.js';
 import { ElementalComponent } from '../components/ElementalComponents.js';
 import { BossComponent } from '../components/BossComponent.js';
@@ -219,6 +219,34 @@ export class WaveManager {
 
             ai.behavior = 'charger';
             ai.chargeTimer = 2 + Math.random();
+
+        } else if (type === 'healer') {
+            v.speed = 40;
+            h.current = h.max = 60;
+            s.value = 50;
+            r.color = '#00ff00'; // Green
+            r.shape = 'circle';
+            r.width = 24;
+            r.height = 24;
+
+            enemy.addComponent(new SupportComponent());
+            const sup = enemy.getComponent('SupportComponent');
+            sup.type = 'healer';
+            sup.effectStrength = 20;
+
+        } else if (type === 'buffer') {
+            v.speed = 90;
+            h.current = h.max = 40;
+            s.value = 50;
+            r.color = '#00ffff'; // Cyan
+            r.shape = 'circle';
+            r.width = 24;
+            r.height = 24;
+
+            enemy.addComponent(new SupportComponent());
+            const sup = enemy.getComponent('SupportComponent');
+            sup.type = 'buffer';
+            sup.range = 300;
         }
     }
 }
