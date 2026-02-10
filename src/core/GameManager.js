@@ -17,6 +17,7 @@ export class GameManager {
     constructor(game) {
         this.game = game;
         this.state = GameState.MENU;
+        this.previousState = null;
 
         // UI Elements
         this.menuScreen = document.getElementById('menu-screen');
@@ -27,6 +28,8 @@ export class GameManager {
         this.victoryScreen = document.getElementById('victory-screen');
         this.pauseScreen = document.getElementById('pause-screen');
         this.levelUpScreen = document.getElementById('levelup-screen');
+        this.optionsScreen = document.getElementById('options-screen');
+        this.creditsScreen = document.getElementById('credits-screen');
         this.cardsContainer = document.getElementById('cards-container');
         this.leaderboardList = document.getElementById('leaderboard-list');
 
@@ -53,28 +56,51 @@ export class GameManager {
         const lbCloseBtn = document.getElementById('leaderboard-close-btn');
         const wdCloseBtn = document.getElementById('wardrobe-close-btn');
 
+        // New Buttons
+        const optionsBtn = document.getElementById('options-btn');
+        const creditsBtn = document.getElementById('credits-btn');
+        const optionsBackBtn = document.getElementById('options-back-btn');
+        const creditsBackBtn = document.getElementById('credits-back-btn');
+        const resumeBtn = document.getElementById('resume-btn');
+        const pauseOptionsBtn = document.getElementById('pause-options-btn');
+        const quitBtn = document.getElementById('quit-btn');
+
+        // Volume Controls
+        const masterVol = document.getElementById('master-volume');
+        const muteToggle = document.getElementById('mute-toggle');
+        const volValue = document.getElementById('volume-value');
+
         if (startBtn) startBtn.addEventListener('click', () => this.enterHub());
         if (restartBtn) restartBtn.addEventListener('click', () => this.enterHub());
         if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', () => this.enterHub());
 
-        if (shopBtn) {
-            shopBtn.addEventListener('click', () => {
-                this.openShop();
+        if (shopBtn) shopBtn.addEventListener('click', () => this.openShop());
+        if (backBtn) backBtn.addEventListener('click', () => this.closeShop());
+        if (lbCloseBtn) lbCloseBtn.addEventListener('click', () => this.closeOverlay());
+        if (wdCloseBtn) wdCloseBtn.addEventListener('click', () => this.closeOverlay());
+
+        // New Listeners
+        if (optionsBtn) optionsBtn.addEventListener('click', () => this.showOptions(GameState.MENU));
+        if (creditsBtn) creditsBtn.addEventListener('click', () => this.showCredits());
+        if (optionsBackBtn) optionsBackBtn.addEventListener('click', () => this.closeOptions());
+        if (creditsBackBtn) creditsBackBtn.addEventListener('click', () => this.closeCredits());
+
+        if (resumeBtn) resumeBtn.addEventListener('click', () => this.togglePause());
+        if (pauseOptionsBtn) pauseOptionsBtn.addEventListener('click', () => this.showOptions(GameState.PAUSED));
+        if (quitBtn) quitBtn.addEventListener('click', () => this.quitToTitle());
+
+        if (masterVol) {
+            masterVol.addEventListener('input', (e) => {
+                const val = e.target.value / 100;
+                this.game.audioSystem.setMasterVolume(val);
+                if (volValue) volValue.textContent = `${e.target.value}%`;
             });
         }
 
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                this.closeShop();
+        if (muteToggle) {
+            muteToggle.addEventListener('change', (e) => {
+                this.game.audioSystem.toggleMute();
             });
-        }
-
-        if (lbCloseBtn) {
-            lbCloseBtn.addEventListener('click', () => this.closeOverlay());
-        }
-
-        if (wdCloseBtn) {
-            wdCloseBtn.addEventListener('click', () => this.closeOverlay());
         }
 
         // Shop Item Buttons
@@ -213,6 +239,38 @@ export class GameManager {
         this.showScreen(this.menuScreen);
     }
 
+    showOptions(fromState) {
+        this.previousState = fromState;
+        this.state = GameState.MENU; // Logic state
+        this.showScreen(this.optionsScreen);
+    }
+
+    closeOptions() {
+        if (this.previousState === GameState.PAUSED) {
+            this.state = GameState.PAUSED;
+            this.showScreen(this.pauseScreen, false);
+        } else {
+            this.state = GameState.MENU;
+            this.showScreen(this.menuScreen);
+        }
+    }
+
+    showCredits() {
+        this.showScreen(this.creditsScreen);
+    }
+
+    closeCredits() {
+        this.showScreen(this.menuScreen);
+    }
+
+    quitToTitle() {
+        console.log('Quitting to Title...');
+        this.game.stop();
+        this.state = GameState.MENU;
+        this.showScreen(this.menuScreen);
+        // Optional: Clear ECS to free memory, though reset() does it on start
+    }
+
     showLeaderboard() {
         this.state = GameState.LEADERBOARD;
         if (this.leaderboardList) this.leaderboardList.innerHTML = '';
@@ -339,5 +397,7 @@ export class GameManager {
         if (this.levelUpScreen) this.levelUpScreen.classList.add('hidden');
         if (this.leaderboardScreen) this.leaderboardScreen.classList.add('hidden');
         if (this.wardrobeScreen) this.wardrobeScreen.classList.add('hidden');
+        if (this.optionsScreen) this.optionsScreen.classList.add('hidden');
+        if (this.creditsScreen) this.creditsScreen.classList.add('hidden');
     }
 }

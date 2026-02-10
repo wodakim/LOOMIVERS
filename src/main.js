@@ -268,6 +268,10 @@ class Game {
 
     reset() {
         this.stop();
+        // Cleanup old persistent DOM elements
+        const poiLabels = document.querySelectorAll('.poi-label');
+        poiLabels.forEach(el => el.remove());
+
         this.initEngine();
     }
 

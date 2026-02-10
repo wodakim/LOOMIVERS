@@ -6,6 +6,15 @@ export class AudioSystem {
         this.masterVolume = 0.3;
     }
 
+    setMasterVolume(vol) {
+        this.masterVolume = Math.max(0, Math.min(1, vol));
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        return this.isMuted;
+    }
+
     init() {
         if (!this.ctx) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;

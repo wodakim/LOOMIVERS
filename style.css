@@ -435,3 +435,54 @@ canvas {
 .color-swatch:hover {
     transform: scale(1.1);
 }
+
+/* --- NEW MENUS --- */
+.menu-buttons, .pause-menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 300px;
+}
+
+.option-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 20px;
+    color: #fff;
+}
+
+.credits-content p {
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 18px;
+    color: #ccc;
+}
+.credits-content strong {
+    color: #00ffcc;
+    font-size: 22px;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 200px;
+    height: 10px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #00ffcc;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+input[type="checkbox"] {
+    width: 25px;
+    height: 25px;
+    accent-color: #00ffcc;
+    cursor: pointer;
+}

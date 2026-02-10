@@ -40,8 +40,37 @@
             <!-- Ecrans de jeu -->
             <div id="menu-screen" class="screen">
                 <h1>GENESIS SURVIVOR</h1>
-                <button id="start-btn" class="btn">START GAME</button>
-                <button id="shop-btn" class="btn" style="margin-top: 10px; font-size: 18px;">SHOP (META)</button>
+                <div class="menu-buttons">
+                    <button id="start-btn" class="btn">START GAME</button>
+                    <button id="shop-btn" class="btn">SHOP (META)</button>
+                    <button id="options-btn" class="btn">OPTIONS</button>
+                    <button id="credits-btn" class="btn">CREDITS</button>
+                </div>
+            </div>
+
+            <div id="options-screen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
+                <h1>OPTIONS</h1>
+                <div class="option-row">
+                    <label for="master-volume">MASTER VOLUME</label>
+                    <input type="range" id="master-volume" min="0" max="100" value="30">
+                    <span id="volume-value">30%</span>
+                </div>
+                <div class="option-row" style="margin-top: 20px;">
+                    <label for="mute-toggle">MUTE AUDIO</label>
+                    <input type="checkbox" id="mute-toggle">
+                </div>
+                <button id="options-back-btn" class="btn" style="margin-top: 40px;">BACK</button>
+            </div>
+
+            <div id="credits-screen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
+                <h1>CREDITS</h1>
+                <div class="credits-content">
+                    <p><strong>Lead Architect</strong><br>Jules (AI Agent)</p>
+                    <p><strong>Game Design</strong><br>User Prompt</p>
+                    <p><strong>Engine</strong><br>Genesis Survivor Engine (GSE-v1)</p>
+                    <p><strong>Tech Stack</strong><br>Vanilla JS, ECS, No Dependencies</p>
+                </div>
+                <button id="credits-back-btn" class="btn" style="margin-top: 30px;">BACK</button>
             </div>
 
             <div id="shop-screen" class="screen hidden">
@@ -100,9 +129,13 @@
                 <button id="victory-restart-btn" class="btn">PLAY AGAIN</button>
             </div>
 
-            <div id="pause-screen" class="screen hidden" style="background: rgba(0,0,0,0.5);">
+            <div id="pause-screen" class="screen hidden" style="background: rgba(0,0,0,0.8);">
                 <h1>PAUSED</h1>
-                <p>Press 'P' or 'ESC' to Resume</p>
+                <div class="pause-menu-buttons">
+                    <button id="resume-btn" class="btn">RESUME</button>
+                    <button id="pause-options-btn" class="btn">OPTIONS</button>
+                    <button id="quit-btn" class="btn" style="background: #440000; border-color: #ff0000;">QUIT TO TITLE</button>
+                </div>
             </div>
 
             <div id="levelup-screen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
