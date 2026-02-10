@@ -23,6 +23,7 @@ import { CombatSystem } from './systems/CombatSystem.js';
 import { DamageSystem } from './systems/DamageSystem.js';
 import { AISystem } from './systems/AISystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
+import { UISystem } from './systems/UISystem.js';
 import { SEOSystem } from './systems/SEOSystem.js';
 import { TerraformationSystem } from './systems/TerraformationSystem.js';
 import { ParticleSystem } from './systems/ParticleSystem.js';
@@ -86,6 +87,7 @@ class Game {
         this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem); // Injection Audio
         this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem, this.audioSystem); // Injection Audio
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
+        this.uiSystem = new UISystem(this.entityManager);
         this.seoSystem = new SEOSystem(this.entityManager);
 
         this.entityManager.registerSystem(this.inputSystem);
@@ -99,6 +101,7 @@ class Game {
         this.entityManager.registerSystem(this.damageSystem);
         this.entityManager.registerSystem(this.progressionSystem);
         this.entityManager.registerSystem(this.alchemySystem);
+        this.entityManager.registerSystem(this.uiSystem);
 
         // Demo Terraformation : Ajouter des zones initiales
         this.terraformationSystem.addZone(200, 200, 100, 'water');

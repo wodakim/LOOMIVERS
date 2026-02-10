@@ -1,10 +1,13 @@
+import { WeaponTypes } from '../data/WeaponTypes.js';
+
 export const GameState = {
     MENU: 'MENU',
     PLAYING: 'PLAYING',
     PAUSED: 'PAUSED',
     GAMEOVER: 'GAMEOVER',
     SHOP: 'SHOP',
-    VICTORY: 'VICTORY'
+    VICTORY: 'VICTORY',
+    LEVELUP: 'LEVELUP'
 };
 
 export class GameManager {
@@ -18,6 +21,8 @@ export class GameManager {
         this.gameOverScreen = document.getElementById('gameover-screen');
         this.victoryScreen = document.getElementById('victory-screen');
         this.pauseScreen = document.getElementById('pause-screen');
+        this.levelUpScreen = document.getElementById('levelup-screen');
+        this.cardsContainer = document.getElementById('cards-container');
 
         this.finalScoreElement = document.getElementById('final-score');
         this.victoryScoreElement = document.getElementById('victory-score');
@@ -80,21 +85,58 @@ export class GameManager {
     togglePause() {
         if (this.state === GameState.PLAYING) {
             this.state = GameState.PAUSED;
-            this.game.stop(); // Stop loop
-            this.showScreen(this.pauseScreen, false); // false = don't hide game canvas
+            this.game.stop();
+            this.showScreen(this.pauseScreen, false);
         } else if (this.state === GameState.PAUSED) {
             this.state = GameState.PLAYING;
             this.pauseScreen.classList.add('hidden');
-            this.game.gameLoop.start(); // Resume loop
+            this.game.gameLoop.start();
         }
+    }
+
+    showLevelUp(choices, onSelectCallback) {
+        this.state = GameState.LEVELUP;
+        this.game.stop();
+
+        this.cardsContainer.innerHTML = '';
+
+        choices.forEach(choice => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            // Icon Logic (Simple Text/Char)
+            let icon = '?';
+            if (choice.type === 'stat') icon = '⚡';
+            if (choice.type === 'heal') icon = '❤';
+            if (choice.type === 'weapon') icon = '⚔';
+
+            card.innerHTML = `
+                <div class="card-icon">${icon}</div>
+                <h3>${choice.name}</h3>
+                <p>${choice.description}</p>
+            `;
+
+            card.addEventListener('click', () => {
+                onSelectCallback(choice);
+                this.closeLevelUp();
+            });
+
+            this.cardsContainer.appendChild(card);
+        });
+
+        this.showScreen(this.levelUpScreen, false);
+    }
+
+    closeLevelUp() {
+        this.state = GameState.PLAYING;
+        this.levelUpScreen.classList.add('hidden');
+        this.game.gameLoop.start();
     }
 
     startGame() {
         console.log('Game Starting...');
         this.state = GameState.PLAYING;
         this.hideAllScreens();
-
-        // Apply upgrades is done in game.start()
         this.game.start();
     }
 
@@ -116,10 +158,8 @@ export class GameManager {
 
     buyUpgrade(key) {
         if (this.game.upgradeManager.buyUpgrade(key)) {
-            // Success
             this.updateShopUI();
         } else {
-            // Failed (Not enough gold or max level)
             console.log("Cannot buy upgrade: " + key);
         }
     }
@@ -144,7 +184,7 @@ export class GameManager {
                     btn.disabled = true;
                     btn.classList.add('disabled');
                 } else if (gold < upg.cost) {
-                    btn.classList.add('disabled'); // Visual only, logic handled in buyUpgrade
+                    btn.classList.add('disabled');
                 } else {
                     btn.disabled = false;
                     btn.classList.remove('disabled');
@@ -176,7 +216,7 @@ export class GameManager {
         console.log(`VICTORY! Score: ${score}.`);
 
         if (this.game.audioSystem) {
-            this.game.audioSystem.playLevelUp(); // Joyful sound
+            this.game.audioSystem.playLevelUp();
         }
 
         this.showScreen(this.victoryScreen);
@@ -184,9 +224,7 @@ export class GameManager {
     }
 
     processEndGame(score) {
-        // Conversion Score -> Gold et Sauvegarde
         const data = this.game.saveSystem.load() || { gold: 0, highScore: 0 };
-        // Simple Economy: 10% of Score = Gold
         const goldEarned = Math.floor(score * 0.1);
 
         data.gold = (data.gold || 0) + goldEarned;
@@ -206,5 +244,6 @@ export class GameManager {
         if (this.gameOverScreen) this.gameOverScreen.classList.add('hidden');
         if (this.victoryScreen) this.victoryScreen.classList.add('hidden');
         if (this.pauseScreen) this.pauseScreen.classList.add('hidden');
+        if (this.levelUpScreen) this.levelUpScreen.classList.add('hidden');
     }
 }

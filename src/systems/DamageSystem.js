@@ -56,9 +56,7 @@ export class DamageSystem extends System {
         this.checkContactDamage(entities, grid);
 
         // 2. Score UI
-        if (this.scoreElement) {
-             this.scoreElement.textContent = `SCORE: ${this.score.toString().padStart(5, '0')}`;
-        }
+        // Handled in UISystem now
 
         // 3. Global Death Check
         for (const entity of entities) {

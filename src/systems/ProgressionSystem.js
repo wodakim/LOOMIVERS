@@ -9,9 +9,6 @@ export class ProgressionSystem extends System {
         super(entityManager);
         this.physicsSystem = physicsSystem;
         this.audioSystem = audioSystem;
-        this.uiXPBar = document.getElementById('xp-fill'); // À créer dans HTML
-        this.uiLevel = document.getElementById('level-display'); // À créer
-        this.levelUpOverlay = document.getElementById('levelup-overlay'); // À créer
     }
 
     update(dt) {
@@ -21,7 +18,6 @@ export class ProgressionSystem extends System {
         let playerTransform = null;
         let playerLevel = null;
 
-        // Trouver le joueur
         for (const entity of entities) {
             if (entity.active && entity.tags.has('player')) {
                 player = entity;
@@ -33,21 +29,13 @@ export class ProgressionSystem extends System {
 
         if (!player) return;
 
-        // Si le joueur level up, on arrête la logique (Pause) - Géré par GameLoop normalement via un State
+        // Skip logic if leveling up
         if (playerLevel && playerLevel.isLevelingUp) return;
 
-        // Gestion des Collectables (XP)
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('CollectableComponent') && entity.hasComponent('TransformComponent')) {
                 this.handleCollectable(entity, player, playerTransform, dt);
             }
-        }
-
-        // Mise à jour UI
-        if (playerLevel && this.uiXPBar && this.uiLevel) {
-            const progress = (playerLevel.currentXP / playerLevel.nextLevelXP) * 100;
-            this.uiXPBar.style.width = `${progress}%`;
-            this.uiLevel.textContent = `LVL ${playerLevel.level}`;
         }
     }
 
@@ -59,16 +47,12 @@ export class ProgressionSystem extends System {
         const dy = playerTransform.y - gemTransform.y;
         const distSq = dx * dx + dy * dy;
 
-        // Magnétisme
         if (distSq < collectable.magnetRange * collectable.magnetRange) {
             const dist = Math.sqrt(distSq);
-
-            // Attirer vers le joueur
-            if (dist > 10) { // Pas trop près pour éviter le jitter
+            if (dist > 10) {
                 gemTransform.x += (dx / dist) * collectable.magnetSpeed * dt;
                 gemTransform.y += (dy / dist) * collectable.magnetSpeed * dt;
             } else {
-                // Collecté !
                 this.collect(gem, player);
             }
         }
@@ -86,7 +70,7 @@ export class ProgressionSystem extends System {
             }
         } else if (collectable.type === 'health' && health) {
             health.current = Math.min(health.current + collectable.value, health.max);
-            if (this.audioSystem) this.audioSystem.playTone(400, 'sine', 0.2, 0.5); // Heal sound
+            if (this.audioSystem) this.audioSystem.playTone(400, 'sine', 0.2, 0.5);
         } else if (collectable.type === 'magnet') {
             this.triggerMagnetEffect(player);
             if (this.audioSystem) this.audioSystem.playTone(800, 'sine', 0.5, 0.5);
@@ -99,13 +83,10 @@ export class ProgressionSystem extends System {
         const entities = this.entityManager.getEntities();
         for (const entity of entities) {
             if (entity.active && entity.hasComponent('CollectableComponent')) {
-                // Force magnet range to infinite temporarily logic?
-                // Or just teleport gems close?
-                // Better: Set a flag or huge range on gems
                 const c = entity.getComponent('CollectableComponent');
                 if (c.type === 'xp') {
-                    c.magnetRange = 2000; // Pull everything on screen
-                    c.magnetSpeed = 800; // Fast
+                    c.magnetRange = 2000;
+                    c.magnetSpeed = 800;
                 }
             }
         }
@@ -116,31 +97,61 @@ export class ProgressionSystem extends System {
             this.audioSystem.playLevelUp();
         }
 
-        level.currentXP -= level.nextLevelXP;
-        level.level++;
-        level.nextLevelXP = Math.floor(level.nextLevelXP * 1.5);
+        level.isLevelingUp = true; // Pause logic in next update
 
-        console.log(`LEVEL UP! Now level ${level.level}`);
+        // Generate Choices
+        const choices = this.generateUpgradeChoices();
 
-        // Amélioration stats basiques (POC)
-        // Dans une version complète, on afficherait l'UI et mettrait le jeu en pause
+        // Call GameManager to show UI
+        // Assuming global access or passed in constructor.
+        // For POC: window.game
+        window.game.gameManager.showLevelUp(choices, (selectedChoice) => {
+            this.applyUpgrade(player, selectedChoice);
+            // Resume
+            level.currentXP -= level.nextLevelXP;
+            level.level++;
+            level.nextLevelXP = Math.floor(level.nextLevelXP * 1.5);
+            level.isLevelingUp = false;
+        });
+    }
+
+    generateUpgradeChoices() {
+        const pool = [
+            { type: 'stat', id: 'dmg', name: 'Damage Boost', description: 'Increase Damage by 2' },
+            { type: 'stat', id: 'speed', name: 'Speed Boost', description: 'Increase Speed by 10%' },
+            { type: 'stat', id: 'fire', name: 'Rapid Fire', description: 'Fire Rate +10%' },
+            { type: 'heal', id: 'heal', name: 'Full Heal', description: 'Restore all HP' },
+            { type: 'stat', id: 'hp', name: 'Max Health', description: 'Max HP +20' }
+        ];
+
+        // Pick 3 random
+        const choices = [];
+        for (let i = 0; i < 3; i++) {
+            const rand = Math.floor(Math.random() * pool.length);
+            choices.push(pool[rand]);
+        }
+        return choices;
+    }
+
+    applyUpgrade(player, choice) {
         const weapon = player.getComponent('WeaponComponent');
-        if (weapon) {
-            weapon.damage += 1; // Was 5 (Nerf)
-            weapon.fireRate += 0.05; // Was 0.2 (Nerf)
-            console.log('Weapon Upgraded!');
+        const health = player.getComponent('HealthComponent');
+        const velocity = player.getComponent('VelocityComponent');
+
+        if (choice.id === 'dmg') weapon.damage += 2;
+        if (choice.id === 'speed') velocity.speed *= 1.1;
+        if (choice.id === 'fire') weapon.fireRate *= 1.1;
+        if (choice.id === 'heal') health.current = health.max;
+        if (choice.id === 'hp') {
+            health.max += 20;
+            health.current += 20;
         }
 
-        const health = player.getComponent('HealthComponent');
-        if (health) {
-            health.max += 5; // Was 20 (Nerf)
-            health.current = health.max; // Soin complet
-        }
+        console.log(`Applied Upgrade: ${choice.name}`);
     }
 
     spawnXPGem(x, y, value) {
         const gem = this.entityManager.createEntity();
-
         gem.addComponent(new TransformComponent());
         const t = gem.getComponent('TransformComponent');
         t.x = x;
@@ -153,16 +164,15 @@ export class ProgressionSystem extends System {
 
         gem.addComponent(new RenderComponent());
         const r = gem.getComponent('RenderComponent');
-        r.shape = 'circle'; // Gemme ronde
+        r.shape = 'circle';
         r.width = 6;
         r.height = 6;
-        r.color = '#00ff00'; // Vert XP
-        r.layer = 2; // Au sol
+        r.color = '#00ff00';
+        r.layer = 2;
     }
 
     spawnPickup(x, y, type) {
         const pickup = this.entityManager.createEntity();
-
         pickup.addComponent(new TransformComponent());
         const t = pickup.getComponent('TransformComponent');
         t.x = x;
@@ -171,7 +181,7 @@ export class ProgressionSystem extends System {
         pickup.addComponent(new CollectableComponent());
         const c = pickup.getComponent('CollectableComponent');
         c.type = type;
-        c.magnetRange = 50; // Pickups are harder to get
+        c.magnetRange = 50;
         c.magnetSpeed = 100;
 
         pickup.addComponent(new RenderComponent());
@@ -183,9 +193,9 @@ export class ProgressionSystem extends System {
 
         if (type === 'health') {
             c.value = 30;
-            r.color = '#ff0000'; // Red Heart
+            r.color = '#ff0000';
         } else if (type === 'magnet') {
-            r.color = '#0000ff'; // Blue Magnet
+            r.color = '#0000ff';
         }
     }
 }
