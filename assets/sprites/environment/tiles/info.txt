@@ -1,0 +1,20 @@
+ASSET MANIFEST
+================
+
+Name: tile_grass
+Size: 64x64
+Description: Grass Tile
+
+Name: tile_dirt
+Size: 64x64
+Description: Dirt Tile
+
+Name: tile_water
+Size: 64x64
+Description: Water Tile
+
+Name: tile_lava
+Size: 64x64
+Description: Lava Tile
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

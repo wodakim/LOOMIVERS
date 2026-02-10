@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: orc_walk
+Size: 80x80
+Description: Tank Orc Walk
+
+Name: orc_attack
+Size: 80x80
+Description: Tank Orc Attack
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

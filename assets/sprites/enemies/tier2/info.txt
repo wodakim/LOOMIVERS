@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: skeleton_walk
+Size: 40x40
+Description: Fast Skeleton Walk
+
+Name: skeleton_attack
+Size: 40x40
+Description: Fast Skeleton Attack
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

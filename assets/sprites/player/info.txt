@@ -1,0 +1,16 @@
+ASSET MANIFEST
+================
+
+Name: player_idle
+Size: 64x64
+Description: Player Idle
+
+Name: player_run
+Size: 64x64
+Description: Player Running (4 frames)
+
+Name: player_attack
+Size: 64x64
+Description: Player Attacking
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

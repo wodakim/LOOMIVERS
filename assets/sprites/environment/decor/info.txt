@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: decor_tree
+Size: 96x128
+Description: Tree Decor
+
+Name: decor_rock
+Size: 48x48
+Description: Rock Decor
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

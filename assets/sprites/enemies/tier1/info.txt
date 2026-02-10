@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: zombie_walk
+Size: 48x48
+Description: Basic Zombie Walk
+
+Name: zombie_attack
+Size: 48x48
+Description: Basic Zombie Attack
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

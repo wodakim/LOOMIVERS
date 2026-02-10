@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: vfx_explosion
+Size: 64x64
+Description: Explosion Effect
+
+Name: vfx_hit
+Size: 32x32
+Description: Hit Flash
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

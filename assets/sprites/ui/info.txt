@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: icon_heart
+Size: 32x32
+Description: Heart Icon
+
+Name: icon_sword
+Size: 32x32
+Description: Sword Icon
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

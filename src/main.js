@@ -41,6 +41,7 @@ import { WaveManager } from './core/WaveManager.js';
 import { GameManager, GameState } from './core/GameManager.js';
 import { UpgradeManager } from './core/UpgradeManager.js';
 import { WeaponTypes } from './data/WeaponTypes.js';
+import { AssetSources, Animations } from './data/AssetManifest.js';
 
 /**
  * Point d'entrée principal du moteur Genesis Survivor.
@@ -183,6 +184,34 @@ class Game {
         r.height = 40;
         r.layer = 10;
 
+        // Sprite for Player
+        if (this.assetLoader) {
+            const idleKeys = Animations['player_idle'];
+            const runKeys = Animations['player_run'];
+            const attackKeys = Animations['player_attack'];
+
+            if (idleKeys && runKeys) {
+                const idleImgs = idleKeys.map(k => this.assetLoader.get(k)).filter(img => img);
+                const runImgs = runKeys.map(k => this.assetLoader.get(k)).filter(img => img);
+                const attackImgs = attackKeys ? attackKeys.map(k => this.assetLoader.get(k)).filter(img => img) : [];
+
+                if (idleImgs.length > 0) {
+                    hero.addComponent(new SpriteComponent());
+                    const sprite = hero.getComponent('SpriteComponent');
+                    sprite.animations['idle'] = idleImgs;
+                    sprite.animations['walk'] = runImgs; // Map run to walk for MovementSystem? No, it uses 'walk' often.
+                    sprite.animations['run'] = runImgs;
+                    sprite.animations['attack'] = attackImgs;
+                    sprite.currentAnimation = 'idle';
+
+                    // Adjust collider/render size to match sprite
+                    r.width = 64;
+                    r.height = 64;
+                    c.radius = 24;
+                }
+            }
+        }
+
         if (canShoot) {
             hero.addComponent(new WeaponComponent());
             const weapon = hero.getComponent('WeaponComponent');
@@ -316,13 +345,7 @@ class Game {
 
     async loadAssets() {
         this.assetLoader = new AssetLoader();
-        const sources = {
-            'zombie_walk1': 'assets/sprites/enemies/tier1/Zombie_walk1.png',
-            'zombie_walk2': 'assets/sprites/enemies/tier1/Zombie_walk2.png',
-            'zombie_walk3': 'assets/sprites/enemies/tier1/Zombie_walk3.png',
-            'zombie_attack': 'assets/sprites/enemies/tier1/Zombie_attack.png'
-        };
-        await this.assetLoader.loadImages(sources);
+        await this.assetLoader.loadImages(AssetSources);
         console.log('Assets loaded');
 
         if (this.waveManager) {

@@ -1,0 +1,12 @@
+ASSET MANIFEST
+================
+
+Name: boss_idle
+Size: 128x128
+Description: Boss Idle
+
+Name: boss_attack
+Size: 128x128
+Description: Boss Attack Phase
+
+Instructions: Replace these placeholders with pixel art assets matching the dimensions.

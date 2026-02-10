@@ -83,13 +83,25 @@ export class UISystem extends System {
 
         // Create/Update labels
         for (const poi of pois) {
+            let labelText = 'POI';
+            if (poi.label) labelText = poi.label;
+            else if (poi.hasComponent('InteractableComponent')) {
+                labelText = poi.getComponent('InteractableComponent').label;
+            }
+
             let el = this.poiLabels.get(poi.id);
             if (!el) {
                 el = document.createElement('div');
                 el.className = 'poi-label';
-                el.innerHTML = `<div class="arrow">⬇</div><span>${poi.label || 'POI'}</span>`;
+                el.innerHTML = `<div class="arrow">⬇</div><span>${labelText}</span>`;
                 this.poiContainer.appendChild(el);
                 this.poiLabels.set(poi.id, el);
+            }
+
+            // Update text if changed (e.g. state change)
+            const span = el.querySelector('span');
+            if (span && span.textContent !== labelText) {
+                span.textContent = labelText;
             }
 
             // Position (World to Screen)

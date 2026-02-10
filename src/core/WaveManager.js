@@ -3,6 +3,7 @@ import { HealthComponent, ScoreComponent } from '../components/StatsComponents.j
 import { ElementalComponent } from '../components/ElementalComponents.js';
 import { BossComponent } from '../components/BossComponent.js';
 import { WavesConfig } from '../data/WavesConfig.js';
+import { Animations } from '../data/AssetManifest.js';
 
 export class WaveManager {
     constructor(entityManager, width, height, assetLoader) {
@@ -164,36 +165,38 @@ export class WaveManager {
         // Elemental (Default none)
         enemy.addComponent(new ElementalComponent());
 
+        // Helper to load anims
+        const setupSprite = (animPrefix, defaultAnim = 'walk') => {
+            if (!this.assetLoader || !Animations[animPrefix]) return;
+
+            const keys = Animations[animPrefix];
+            const imgs = keys.map(k => this.assetLoader.get(k)).filter(i => i);
+
+            if (imgs.length > 0) {
+                enemy.addComponent(new SpriteComponent());
+                const sprite = enemy.getComponent('SpriteComponent');
+                sprite.animations[defaultAnim] = imgs;
+                sprite.currentAnimation = defaultAnim;
+
+                // Try to find attack
+                const attackKeys = Animations[animPrefix.split('_')[0] + '_attack'];
+                if (attackKeys) {
+                    const atkImgs = attackKeys.map(k => this.assetLoader.get(k)).filter(i => i);
+                    if (atkImgs.length > 0) sprite.animations['attack'] = atkImgs;
+                }
+            }
+        };
+
         // Config selon le Type
         if (type === 'tier1') {
             v.speed = 80 + Math.random() * 40;
-            h.current = h.max = 50; // BUFFED from 30
+            h.current = h.max = 50;
             s.value = 10;
-            r.color = '#ff3333'; // Rouge
+            r.color = '#ff3333';
 
-            // Sprite Logic
-            if (this.assetLoader) {
-                const walk1 = this.assetLoader.get('zombie_walk1');
-                const walk2 = this.assetLoader.get('zombie_walk2');
-                const walk3 = this.assetLoader.get('zombie_walk3');
-                const attack = this.assetLoader.get('zombie_attack');
+            setupSprite('zombie_walk');
 
-                if (walk1 && walk2 && walk3) {
-                    enemy.addComponent(new SpriteComponent());
-                    const sprite = enemy.getComponent('SpriteComponent');
-                    // Cycle 1-2-3-2 for smooth walk
-                    sprite.animations['walk'] = [walk1, walk2, walk3, walk2];
-                    if (attack) {
-                        sprite.animations['attack'] = [attack];
-                    }
-                    sprite.currentAnimation = 'walk';
-                    sprite.frameDuration = 0.15;
-                    // Ensure sprite is playing
-                    sprite.isPlaying = true;
-                }
-            }
-
-            // 50% de chance d'être "HUILEUX" (Noir/Violet foncé)
+            // 50% de chance d'être "HUILEUX"
             if (Math.random() > 0.5) {
                 enemy.getComponent('ElementalComponent').tags.add('oil');
                 r.color = '#440044';
@@ -201,25 +204,35 @@ export class WaveManager {
 
         } else if (type === 'tier2') {
             v.speed = 60;
-            h.current = h.max = 150; // BUFFED from 100
+            h.current = h.max = 150;
             s.value = 50;
-            r.color = '#aa00aa'; // Violet
+            r.color = '#aa00aa';
             r.width = 48;
             r.height = 48;
             c.radius = 24;
+
+            setupSprite('skeleton_walk');
+
         } else if (type === 'boss1') {
             v.speed = 40;
-            h.current = h.max = 5000; // BUFFED from 2000
+            h.current = h.max = 5000;
             s.value = 1000;
-            r.color = '#ff0000'; // Rouge vif
+            r.color = '#ff0000';
             r.width = 128;
             r.height = 128;
             c.radius = 64;
 
             enemy.addComponent(new BossComponent());
-
-            // Le boss est élémentaire (FEU + HUILE = DANGEREUX)
             enemy.getComponent('ElementalComponent').tags.add('fire');
+
+            setupSprite('boss_idle', 'idle');
+            // Manual attack override
+            if (this.assetLoader && Animations['boss_attack']) {
+                const s = enemy.getComponent('SpriteComponent');
+                if (s) {
+                    s.animations['attack'] = Animations['boss_attack'].map(k => this.assetLoader.get(k)).filter(i => i);
+                }
+            }
 
         } else if (type === 'shooter') {
             v.speed = 70;
@@ -233,15 +246,17 @@ export class WaveManager {
             ai.shootTimer = Math.random() * 2; // Random offset
 
         } else if (type === 'charger') {
-            v.speed = 50; // Base speed slow
-            h.current = h.max = 120; // BUFFED from 80
+            v.speed = 50;
+            h.current = h.max = 120;
             s.value = 40;
-            r.color = '#ffaa00'; // Orange
+            r.color = '#ffaa00';
             r.width = 40;
             r.height = 40;
 
             ai.behavior = 'charger';
             ai.chargeTimer = 2 + Math.random();
+
+            setupSprite('orc_walk'); // Reuse Orc for Charger
 
         } else if (type === 'healer') {
             v.speed = 40;
