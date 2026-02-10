@@ -1,14 +1,15 @@
-import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent, SupportComponent } from '../components/Components.js';
+import { TransformComponent, VelocityComponent, RenderComponent, ColliderComponent, AIComponent, SupportComponent, SpriteComponent } from '../components/Components.js';
 import { HealthComponent, ScoreComponent } from '../components/StatsComponents.js';
 import { ElementalComponent } from '../components/ElementalComponents.js';
 import { BossComponent } from '../components/BossComponent.js';
 import { WavesConfig } from '../data/WavesConfig.js';
 
 export class WaveManager {
-    constructor(entityManager, width, height) {
+    constructor(entityManager, width, height, assetLoader) {
         this.entityManager = entityManager;
         this.width = width;
         this.height = height;
+        this.assetLoader = assetLoader;
 
         this.currentTime = 0;
         this.currentWaveIndex = -1;
@@ -169,6 +170,28 @@ export class WaveManager {
             h.current = h.max = 50; // BUFFED from 30
             s.value = 10;
             r.color = '#ff3333'; // Rouge
+
+            // Sprite Logic
+            if (this.assetLoader) {
+                const walk1 = this.assetLoader.get('zombie_walk1');
+                const walk2 = this.assetLoader.get('zombie_walk2');
+                const walk3 = this.assetLoader.get('zombie_walk3');
+                const attack = this.assetLoader.get('zombie_attack');
+
+                if (walk1 && walk2 && walk3) {
+                    enemy.addComponent(new SpriteComponent());
+                    const sprite = enemy.getComponent('SpriteComponent');
+                    // Cycle 1-2-3-2 for smooth walk
+                    sprite.animations['walk'] = [walk1, walk2, walk3, walk2];
+                    if (attack) {
+                        sprite.animations['attack'] = [attack];
+                    }
+                    sprite.currentAnimation = 'walk';
+                    sprite.frameDuration = 0.15;
+                    // Ensure sprite is playing
+                    sprite.isPlaying = true;
+                }
+            }
 
             // 50% de chance d'être "HUILEUX" (Noir/Violet foncé)
             if (Math.random() > 0.5) {

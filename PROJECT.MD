@@ -16,6 +16,7 @@ Ces fonctionnalités sont implémentées et vérifiées.
     *   [x] Gestionnaire de mémoire (Object Pool) pour Entités.
     *   [x] Physique : Spatial Hashing (Grille) pour collisions optimisées.
     *   [x] Rendu : Canvas API 2D optimisé + Offscreen Canvas (Terraformation).
+    *   [x] **Assets :** Support Sprites (PNG) avec cycles d'animation (Walk/Attack).
 
 *   **Gameplay Core**
     *   [x] Mouvement Joueur (Clavier + Joystick Mobile).

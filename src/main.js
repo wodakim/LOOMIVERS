@@ -3,6 +3,7 @@ import { EntityManager } from './ecs/EntityManager.js';
 import { InputHandler } from './core/InputHandler.js';
 import { SaveSystem } from './core/SaveSystem.js';
 import { AudioSystem } from './core/AudioSystem.js';
+import { AssetLoader } from './core/AssetLoader.js';
 
 // Components
 import {
@@ -12,10 +13,12 @@ import {
     InputComponent,
     AIComponent,
     ColliderComponent,
-    DashComponent
+    DashComponent,
+    SpriteComponent
 } from './components/Components.js';
 
 // Systems
+import { AnimationSystem } from './systems/AnimationSystem.js';
 import { InputSystem } from './systems/InputSystem.js';
 import { MovementSystem } from './systems/MovementSystem.js';
 import { PhysicsSystem } from './systems/PhysicsSystem.js';
@@ -68,7 +71,7 @@ class Game {
         this.inputHandler = new InputHandler();
 
         // Wave Manager (Director)
-        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
+        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height, this.assetLoader);
 
         // Initialisation des Systèmes
         this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
@@ -85,8 +88,10 @@ class Game {
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.uiSystem = new UISystem(this.entityManager);
         this.seoSystem = new SEOSystem(this.entityManager);
+        this.animationSystem = new AnimationSystem(this.entityManager);
 
         this.entityManager.registerSystem(this.inputSystem);
+        this.entityManager.registerSystem(this.animationSystem);
         this.entityManager.registerSystem(this.aiSystem);
         this.entityManager.registerSystem(this.combatSystem);
         this.entityManager.registerSystem(this.terraformationSystem);
@@ -114,7 +119,7 @@ class Game {
     // Called for Run
     initWorld() {
         // Reset systems relevant to runs
-        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
+        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height, this.assetLoader);
 
         // Demo Terraformation : Ajouter des zones initiales
         this.terraformationSystem.zones = []; // Reset zones
@@ -296,9 +301,27 @@ class Game {
         // Rendu (Interpolé)
         this.renderSystem.render(alpha);
     }
+
+    async loadAssets() {
+        this.assetLoader = new AssetLoader();
+        const sources = {
+            'zombie_walk1': 'assets/sprites/enemies/tier1/Zombie_walk1.png',
+            'zombie_walk2': 'assets/sprites/enemies/tier1/Zombie_walk2.png',
+            'zombie_walk3': 'assets/sprites/enemies/tier1/Zombie_walk3.png',
+            'zombie_attack': 'assets/sprites/enemies/tier1/Zombie_attack.png'
+        };
+        await this.assetLoader.loadImages(sources);
+        console.log('Assets loaded');
+
+        if (this.waveManager) {
+            this.waveManager.assetLoader = this.assetLoader;
+        }
+    }
 }
 
 // Démarrage
-window.addEventListener('DOMContentLoaded', () => {
-    window.game = new Game();
+window.addEventListener('DOMContentLoaded', async () => {
+    const game = new Game();
+    window.game = game;
+    await game.loadAssets();
 });

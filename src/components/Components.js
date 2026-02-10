@@ -168,3 +168,28 @@ export class InteractableComponent extends Component {
         this.isHovered = false;
     }
 }
+
+export class SpriteComponent extends Component {
+    constructor() {
+        super();
+        this.animations = {}; // { 'walk': [img1, img2], 'attack': [img3] }
+        this.currentAnimation = 'default';
+        this.currentFrameIndex = 0;
+        this.frameTimer = 0;
+        this.frameDuration = 0.15; // Seconds per frame
+        this.loop = true;
+        this.isPlaying = true;
+        this.flipX = false;
+    }
+
+    reset() {
+        this.animations = {};
+        this.currentAnimation = 'default';
+        this.currentFrameIndex = 0;
+        this.frameTimer = 0;
+        this.frameDuration = 0.15;
+        this.loop = true;
+        this.isPlaying = true;
+        this.flipX = false;
+    }
+}

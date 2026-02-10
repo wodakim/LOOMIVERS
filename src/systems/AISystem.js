@@ -177,6 +177,22 @@ export class AISystem extends System {
         const dy = targetTransform.y - transform.y;
         let dist = Math.sqrt(dx * dx + dy * dy);
 
+        // Visual State Update
+        if (entity.hasComponent('SpriteComponent')) {
+            const sprite = entity.getComponent('SpriteComponent');
+            if (dist < 60) { // Close range
+                if (sprite.currentAnimation !== 'attack' && sprite.animations['attack']) {
+                    sprite.currentAnimation = 'attack';
+                    sprite.currentFrameIndex = 0;
+                }
+            } else {
+                if (sprite.currentAnimation !== 'walk' && sprite.animations['walk']) {
+                    sprite.currentAnimation = 'walk';
+                    sprite.currentFrameIndex = 0; // Optional: reset or keep frame
+                }
+            }
+        }
+
         let dirX = 0;
         let dirY = 0;
 

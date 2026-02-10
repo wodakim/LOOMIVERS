@@ -57,18 +57,18 @@ export class RenderSystem extends System {
         for (const entity of renderables) {
             const transform = entity.getComponent('TransformComponent');
             const render = entity.getComponent('RenderComponent');
+            const sprite = entity.getComponent('SpriteComponent');
 
             // Gestion du Hit Flash (White Blink)
             if (render.hitFlashTimer > 0) {
                 render.hitFlashTimer -= 0.016; // Approx dt, render receives alpha but we need logic update for visual timer
                 // Or handle in logic system? Render system is fine for visual only state.
-                const originalColor = render.color;
                 this.ctx.save();
-                this.drawShape(transform, render, '#ffffff'); // Force white
+                this.drawEntity(transform, render, sprite, '#ffffff', true); // Force white
                 this.ctx.restore();
             } else {
                 this.ctx.save();
-                this.drawShape(transform, render, render.color);
+                this.drawEntity(transform, render, sprite, render.color, false);
                 this.ctx.restore();
             }
         }
@@ -85,7 +85,7 @@ export class RenderSystem extends System {
         this.drawFPS();
     }
 
-    drawShape(transform, render, color) {
+    drawEntity(transform, render, sprite, color, isHitFlash) {
         this.ctx.translate(transform.x, transform.y);
         this.ctx.rotate(transform.rotation);
 
@@ -94,12 +94,50 @@ export class RenderSystem extends System {
         this.ctx.shadowColor = color;
         this.ctx.fillStyle = color;
 
-        if (render.shape === 'rect') {
-            this.ctx.fillRect(-render.width / 2, -render.height / 2, render.width, render.height);
-        } else if (render.shape === 'circle') {
-            this.ctx.beginPath();
-            this.ctx.arc(0, 0, render.width / 2, 0, Math.PI * 2);
-            this.ctx.fill();
+        let drawn = false;
+
+        // 1. Sprite Rendering
+        if (sprite && sprite.animations) {
+            const frames = sprite.animations[sprite.currentAnimation];
+            if (frames && frames.length > 0) {
+                const img = frames[sprite.currentFrameIndex];
+                if (img) {
+                    this.ctx.save();
+                    if (sprite.flipX) {
+                        this.ctx.scale(-1, 1);
+                    }
+
+                    if (isHitFlash) {
+                        // Flash Effect on Sprite: use GlobalCompositeOperation or Filter
+                        // Filter is expensive, but effective. 'brightness(10)' or 'grayscale(1) brightness(2)'
+                        // Or use source-in with color.
+                        this.ctx.globalCompositeOperation = 'source-over';
+                        // Note: For true white flash on sprite, we need complex masking.
+                        // Simplification: Apply brightness filter
+                        this.ctx.filter = 'brightness(1000%)';
+                    }
+
+                    // Draw Image centered
+                    // We use render.width/height as destination size to match hitbox/design
+                    // But we might want to respect aspect ratio?
+                    // For now, stretch to fit render bounds (simple)
+                    this.ctx.drawImage(img, -render.width / 2, -render.height / 2, render.width, render.height);
+
+                    this.ctx.restore();
+                    drawn = true;
+                }
+            }
+        }
+
+        // 2. Shape Rendering (Fallback or if no sprite)
+        if (!drawn) {
+            if (render.shape === 'rect') {
+                this.ctx.fillRect(-render.width / 2, -render.height / 2, render.width, render.height);
+            } else if (render.shape === 'circle') {
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, render.width / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
         }
     }
 
