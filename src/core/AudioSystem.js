@@ -94,8 +94,8 @@ export class AudioSystem {
     }
 
     playLevelUp() {
+        if (!this.ctx || this.isMuted) return;
         // Major Arpeggio
-        const now = this.ctx.currentTime;
         [440, 554, 659, 880].forEach((freq, i) => {
             setTimeout(() => this.playTone(freq, 'sine', 0.2, 0.4), i * 100);
         });

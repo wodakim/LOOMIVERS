@@ -14,6 +14,7 @@ import {
     AIComponent,
     ColliderComponent,
     DashComponent,
+    InteractableComponent,
     SpriteComponent
 } from './components/Components.js';
 
@@ -60,6 +61,7 @@ class Game {
         this.audioSystem = new AudioSystem();
 
         // Game Manager (State Machine)
+        this.playerColor = '#00ccff'; // Default
         this.gameManager = new GameManager(this);
 
         this.initEngine();
@@ -135,14 +137,16 @@ class Game {
         this.createPlayer(false); // Can't shoot
 
         // Add POIs
-        // Leaderboard
-        this.createPOI(200, 200, '#ff00ff', 'Leaderboard');
-        // Wardrobe
-        this.createPOI(600, 200, '#00ffff', 'Wardrobe');
-        // Bestiary
-        this.createPOI(200, 500, '#00ff00', 'Bestiary');
+        // Leaderboard (Left)
+        this.createPOI(200, 300, '#ff00ff', 'Leaderboard', 'leaderboard');
+        // Wardrobe (Right)
+        this.createPOI(this.canvas.width - 200, 300, '#00ffff', 'Wardrobe', 'wardrobe');
+        // Bestiary (Bottom Left)
+        this.createPOI(300, 600, '#00ff00', 'Bestiary', 'bestiary');
+        // Shop (Bottom Right)
+        this.createPOI(this.canvas.width - 300, 600, '#ffff00', 'Shop', 'shop');
         // Portal
-        this.createPOI(400, 400, '#ff0000', 'PORTAL (Start)', true);
+        this.createPOI(this.canvas.width / 2, 400, '#ff0000', 'PORTAL', 'portal');
     }
 
     createPlayer(canShoot) {
@@ -173,7 +177,7 @@ class Game {
 
         hero.addComponent(new RenderComponent());
         const r = hero.getComponent('RenderComponent');
-        r.color = '#00ccff';
+        r.color = this.playerColor;
         r.shape = 'rect';
         r.width = 40;
         r.height = 40;
@@ -193,10 +197,10 @@ class Game {
         }
     }
 
-    createPOI(x, y, color, label, isPortal = false) {
+    createPOI(x, y, color, label, action) {
         const poi = this.entityManager.createEntity();
         poi.tags.add('poi');
-        if (isPortal) poi.tags.add('portal');
+        if (action === 'portal') poi.tags.add('portal');
 
         poi.addComponent(new TransformComponent());
         poi.getComponent('TransformComponent').x = x;
@@ -210,9 +214,10 @@ class Game {
         r.height = 60;
         r.layer = 1;
 
-        // Interactable Component (Custom, or just use Collider/Name for now)
-        // We'll rely on simple collision check in Update loop or specific system
-        poi.label = label; // Hack: direct property
+        poi.addComponent(new InteractableComponent());
+        const interact = poi.getComponent('InteractableComponent');
+        interact.label = label;
+        interact.action = action;
 
         poi.addComponent(new ColliderComponent());
         const c = poi.getComponent('ColliderComponent');
@@ -257,17 +262,24 @@ class Game {
     update(dt) {
         // HUB Logic Loop check
         if (this.gameManager.state === GameState.HUB) {
-            // Check Portal interaction
+            // Check POI interaction
             const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
-            const portal = this.entityManager.getEntities().find(e => e.tags.has('portal'));
-            if (player && portal) {
+            const pois = this.entityManager.getEntities().filter(e => e.hasComponent('InteractableComponent'));
+
+            if (player) {
                 const pt = player.getComponent('TransformComponent');
-                const portalt = portal.getComponent('TransformComponent');
-                const dx = pt.x - portalt.x;
-                const dy = pt.y - portalt.y;
-                if (dx*dx + dy*dy < 50*50) {
-                    this.gameManager.startGame(); // Trigger run
-                    return;
+                for (const poi of pois) {
+                    const poit = poi.getComponent('TransformComponent');
+                    const interact = poi.getComponent('InteractableComponent');
+                    const dx = pt.x - poit.x;
+                    const dy = pt.y - poit.y;
+                    if (dx*dx + dy*dy < 50*50) {
+                        if (interact.action === 'portal') this.gameManager.startGame();
+                        else if (interact.action === 'leaderboard') this.gameManager.showLeaderboard();
+                        else if (interact.action === 'wardrobe') this.gameManager.showWardrobe();
+                        else if (interact.action === 'shop') this.gameManager.openShop();
+                        else if (interact.action === 'bestiary') console.log('Bestiary locked.');
+                    }
                 }
             }
 

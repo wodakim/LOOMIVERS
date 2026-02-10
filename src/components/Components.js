@@ -158,7 +158,7 @@ export class InteractableComponent extends Component {
     constructor() {
         super();
         this.label = 'Interact';
-        this.action = 'none'; // 'portal', 'leaderboard', 'wardrobe', 'bestiary'
+        this.action = 'none'; // 'portal', 'leaderboard', 'wardrobe', 'bestiary', 'shop'
         this.isHovered = false;
     }
 

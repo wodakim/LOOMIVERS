@@ -8,7 +8,9 @@ export const GameState = {
     GAMEOVER: 'GAMEOVER',
     SHOP: 'SHOP',
     VICTORY: 'VICTORY',
-    LEVELUP: 'LEVELUP'
+    LEVELUP: 'LEVELUP',
+    LEADERBOARD: 'LEADERBOARD',
+    WARDROBE: 'WARDROBE'
 };
 
 export class GameManager {
@@ -19,11 +21,14 @@ export class GameManager {
         // UI Elements
         this.menuScreen = document.getElementById('menu-screen');
         this.shopScreen = document.getElementById('shop-screen');
+        this.leaderboardScreen = document.getElementById('leaderboard-screen');
+        this.wardrobeScreen = document.getElementById('wardrobe-screen');
         this.gameOverScreen = document.getElementById('gameover-screen');
         this.victoryScreen = document.getElementById('victory-screen');
         this.pauseScreen = document.getElementById('pause-screen');
         this.levelUpScreen = document.getElementById('levelup-screen');
         this.cardsContainer = document.getElementById('cards-container');
+        this.leaderboardList = document.getElementById('leaderboard-list');
 
         this.finalScoreElement = document.getElementById('final-score');
         this.victoryScoreElement = document.getElementById('victory-score');
@@ -31,6 +36,9 @@ export class GameManager {
         // Buttons
         this.initButtons();
         this.initInput();
+
+        // Wardrobe listeners
+        this.initWardrobe();
 
         // Initial State
         this.showScreen(this.menuScreen);
@@ -42,6 +50,8 @@ export class GameManager {
         const victoryRestartBtn = document.getElementById('victory-restart-btn');
         const shopBtn = document.getElementById('shop-btn');
         const backBtn = document.getElementById('back-btn');
+        const lbCloseBtn = document.getElementById('leaderboard-close-btn');
+        const wdCloseBtn = document.getElementById('wardrobe-close-btn');
 
         if (startBtn) startBtn.addEventListener('click', () => this.enterHub());
         if (restartBtn) restartBtn.addEventListener('click', () => this.enterHub());
@@ -59,6 +69,14 @@ export class GameManager {
             });
         }
 
+        if (lbCloseBtn) {
+            lbCloseBtn.addEventListener('click', () => this.closeOverlay());
+        }
+
+        if (wdCloseBtn) {
+            wdCloseBtn.addEventListener('click', () => this.closeOverlay());
+        }
+
         // Shop Item Buttons
         const upgradeKeys = [
             'health_boost', 'damage_boost', 'speed_boost',
@@ -73,6 +91,20 @@ export class GameManager {
                 });
             }
         });
+    }
+
+    initWardrobe() {
+        const swatches = document.querySelectorAll('.color-swatch');
+        swatches.forEach(swatch => {
+            swatch.addEventListener('click', (e) => {
+                const color = e.target.getAttribute('data-color');
+                this.setPlayerColor(color);
+            });
+        });
+    }
+
+    setPlayerColor(color) {
+        this.game.playerColor = color;
     }
 
     initInput() {
@@ -107,6 +139,12 @@ export class GameManager {
         this.game.initHub();
 
         this.game.gameLoop.start();
+    }
+
+    closeOverlay() {
+        // Return to HUB state
+        this.state = GameState.HUB;
+        this.hideAllScreens();
     }
 
     startGame() {
@@ -173,6 +211,32 @@ export class GameManager {
     closeShop() {
         this.state = GameState.MENU;
         this.showScreen(this.menuScreen);
+    }
+
+    showLeaderboard() {
+        this.state = GameState.LEADERBOARD;
+        if (this.leaderboardList) this.leaderboardList.innerHTML = '';
+
+        const data = this.game.saveSystem.load() || { highScores: [] };
+        const scores = data.highScores || [];
+
+        if (scores.length === 0) {
+            if (this.leaderboardList) this.leaderboardList.innerHTML = '<li>No scores yet!</li>';
+        } else {
+            scores.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.textContent = `#${index + 1} - ${entry.score} pts - ${new Date(entry.date).toLocaleDateString()}`;
+                if (this.leaderboardList) this.leaderboardList.appendChild(li);
+            });
+        }
+
+        this.showScreen(this.leaderboardScreen);
+    }
+
+    showWardrobe() {
+        this.state = GameState.WARDROBE;
+        // Could highlight current color
+        this.showScreen(this.wardrobeScreen);
     }
 
     buyUpgrade(key) {
@@ -243,11 +307,20 @@ export class GameManager {
     }
 
     processEndGame(score) {
-        const data = this.game.saveSystem.load() || { gold: 0, highScore: 0 };
+        const data = this.game.saveSystem.load() || { gold: 0, highScores: [] };
         const goldEarned = Math.floor(score * 0.1);
 
         data.gold = (data.gold || 0) + goldEarned;
-        if (score > (data.highScore || 0)) data.highScore = score;
+
+        // Handle High Scores List
+        if (!data.highScores) data.highScores = [];
+        data.highScores.push({ score: score, date: Date.now() });
+
+        // Sort descending
+        data.highScores.sort((a, b) => b.score - a.score);
+
+        // Keep top 10
+        data.highScores = data.highScores.slice(0, 10);
 
         this.game.saveSystem.save(data);
     }
@@ -264,5 +337,7 @@ export class GameManager {
         if (this.victoryScreen) this.victoryScreen.classList.add('hidden');
         if (this.pauseScreen) this.pauseScreen.classList.add('hidden');
         if (this.levelUpScreen) this.levelUpScreen.classList.add('hidden');
+        if (this.leaderboardScreen) this.leaderboardScreen.classList.add('hidden');
+        if (this.wardrobeScreen) this.wardrobeScreen.classList.add('hidden');
     }
 }
