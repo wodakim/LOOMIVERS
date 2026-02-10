@@ -4,6 +4,7 @@ import { InputHandler } from './core/InputHandler.js';
 import { SaveSystem } from './core/SaveSystem.js';
 import { AudioSystem } from './core/AudioSystem.js';
 import { AssetLoader } from './core/AssetLoader.js';
+import { MapGenerator } from './core/MapGenerator.js';
 
 // Components
 import {
@@ -121,43 +122,78 @@ class Game {
 
     // Called for Run
     initWorld() {
-        // Reset systems relevant to runs
-        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height, this.assetLoader);
+        // Map Generation
+        const MAP_SIZE = 4096;
+        const TILE_SIZE = 64;
 
-        // Demo Terraformation : Ajouter des zones initiales
-        this.terraformationSystem.zones = []; // Reset zones
-        this.terraformationSystem.addZone(200, 200, 100, 'water');
-        this.terraformationSystem.addZone(600, 400, 80, 'fire');
+        const mapGen = new MapGenerator(MAP_SIZE, MAP_SIZE, TILE_SIZE);
+        const grid = mapGen.generate();
+        const spawn = mapGen.getSpawnPoint();
 
-        this.createPlayer(true); // Can shoot
+        // Update Systems with Map
+        this.physicsSystem.setMap(grid, TILE_SIZE);
+        this.renderSystem.setMap(grid, TILE_SIZE);
+
+        this.movementSystem.setWorldBounds(MAP_SIZE, MAP_SIZE);
+        this.waveManager.setWorldBounds(MAP_SIZE, MAP_SIZE);
+        this.terraformationSystem.resize(MAP_SIZE, MAP_SIZE);
+
+        // Reset Wave Manager
+        this.waveManager = new WaveManager(this.entityManager, MAP_SIZE, MAP_SIZE, this.assetLoader);
+        this.waveManager.setMap(grid, TILE_SIZE);
+
+        // Reset Terraformation Zones
+        this.terraformationSystem.zones = [];
+
+        this.createPlayer(true, spawn.x, spawn.y);
     }
 
     // Called for HUB
     initHub() {
-        this.terraformationSystem.zones = [];
-        this.createPlayer(false); // Can't shoot
+        // Hub is small (Screen Size or Fixed minimum)
+        const HUB_WIDTH = Math.max(this.canvas.width, 1024);
+        const HUB_HEIGHT = Math.max(this.canvas.height, 768);
+        const TILE_SIZE = 64;
+
+        // Generate Empty Map (Border Walls only)
+        const rows = Math.ceil(HUB_HEIGHT / TILE_SIZE);
+        const cols = Math.ceil(HUB_WIDTH / TILE_SIZE);
+        const grid = [];
+        for(let r=0; r<rows; r++) {
+            const row = [];
+            for(let c=0; c<cols; c++) {
+                if(r===0 || r===rows-1 || c===0 || c===cols-1) row.push(1);
+                else row.push(0);
+            }
+            grid.push(row);
+        }
+
+        // Update Systems
+        this.physicsSystem.setMap(grid, TILE_SIZE);
+        this.renderSystem.setMap(grid, TILE_SIZE);
+        this.movementSystem.setWorldBounds(HUB_WIDTH, HUB_HEIGHT);
+        this.waveManager.setWorldBounds(HUB_WIDTH, HUB_HEIGHT);
+        this.waveManager.setMap(grid, TILE_SIZE);
+        this.terraformationSystem.resize(HUB_WIDTH, HUB_HEIGHT);
+
+        this.createPlayer(false, HUB_WIDTH/2, HUB_HEIGHT/2); // Center
 
         // Add POIs
-        // Leaderboard (Left)
         this.createPOI(200, 300, '#ff00ff', 'Leaderboard', 'leaderboard');
-        // Wardrobe (Right)
-        this.createPOI(this.canvas.width - 200, 300, '#00ffff', 'Wardrobe', 'wardrobe');
-        // Bestiary (Bottom Left)
+        this.createPOI(HUB_WIDTH - 200, 300, '#00ffff', 'Wardrobe', 'wardrobe');
         this.createPOI(300, 600, '#00ff00', 'Bestiary', 'bestiary');
-        // Shop (Bottom Right)
-        this.createPOI(this.canvas.width - 300, 600, '#ffff00', 'Shop', 'shop');
-        // Portal
-        this.createPOI(this.canvas.width / 2, 400, '#ff0000', 'PORTAL', 'portal');
+        this.createPOI(HUB_WIDTH - 300, 600, '#ffff00', 'Shop', 'shop');
+        this.createPOI(HUB_WIDTH / 2, 400, '#ff0000', 'PORTAL', 'portal');
     }
 
-    createPlayer(canShoot) {
+    createPlayer(canShoot, x, y) {
         const hero = this.entityManager.createEntity();
         hero.tags.add('player');
 
         hero.addComponent(new TransformComponent());
         const t = hero.getComponent('TransformComponent');
-        t.x = this.canvas.width / 2;
-        t.y = this.canvas.height / 2;
+        t.x = x !== undefined ? x : this.canvas.width / 2;
+        t.y = y !== undefined ? y : this.canvas.height / 2;
 
         hero.addComponent(new VelocityComponent());
         const v = hero.getComponent('VelocityComponent');
@@ -278,50 +314,54 @@ class Game {
     resize() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        if (this.movementSystem) {
-            this.movementSystem.worldWidth = this.canvas.width;
-            this.movementSystem.worldHeight = this.canvas.height;
-        }
-        if (this.physicsSystem) {
-             this.physicsSystem.cols = Math.ceil(this.canvas.width / this.physicsSystem.cellSize);
-             this.physicsSystem.rows = Math.ceil(this.canvas.height / this.physicsSystem.cellSize);
-        }
+
+        // Update RenderSystem Viewport
         if (this.renderSystem) {
             this.renderSystem.width = this.canvas.width;
             this.renderSystem.height = this.canvas.height;
+        }
+
+        // Note: We do NOT update MovementSystem/PhysicsSystem world bounds here
+        // because they are now determined by the generated Map size,
+        // independent of screen size (thanks to the Camera).
+    }
+
+    checkInteraction() {
+        const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
+        const pois = this.entityManager.getEntities().filter(e => e.hasComponent('InteractableComponent'));
+
+        if (player) {
+            const pt = player.getComponent('TransformComponent');
+            for (const poi of pois) {
+                const poit = poi.getComponent('TransformComponent');
+                const interact = poi.getComponent('InteractableComponent');
+                const dx = pt.x - poit.x;
+                const dy = pt.y - poit.y;
+                if (dx*dx + dy*dy < 50*50) {
+                    if (interact.action === 'portal') this.gameManager.startGame();
+                    else if (interact.action === 'leaderboard') this.gameManager.showLeaderboard();
+                    else if (interact.action === 'wardrobe') this.gameManager.showWardrobe();
+                    else if (interact.action === 'shop') this.gameManager.openShop();
+                    else if (interact.action === 'bestiary') console.log('Bestiary locked.');
+                    else if (interact.action === 'end_run') this.gameManager.triggerVictory(this.damageSystem.score);
+                }
+            }
         }
     }
 
     update(dt) {
         // HUB Logic Loop check
         if (this.gameManager.state === GameState.HUB) {
-            // Check POI interaction
-            const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
-            const pois = this.entityManager.getEntities().filter(e => e.hasComponent('InteractableComponent'));
-
-            if (player) {
-                const pt = player.getComponent('TransformComponent');
-                for (const poi of pois) {
-                    const poit = poi.getComponent('TransformComponent');
-                    const interact = poi.getComponent('InteractableComponent');
-                    const dx = pt.x - poit.x;
-                    const dy = pt.y - poit.y;
-                    if (dx*dx + dy*dy < 50*50) {
-                        if (interact.action === 'portal') this.gameManager.startGame();
-                        else if (interact.action === 'leaderboard') this.gameManager.showLeaderboard();
-                        else if (interact.action === 'wardrobe') this.gameManager.showWardrobe();
-                        else if (interact.action === 'shop') this.gameManager.openShop();
-                        else if (interact.action === 'bestiary') console.log('Bestiary locked.');
-                    }
-                }
-            }
-
+            this.checkInteraction();
             // Still update ECS for movement
             this.entityManager.update(dt);
             return;
         }
 
         if (this.gameManager.state !== GameState.PLAYING) return;
+
+        // In-Game Interaction (Return Portal)
+        this.checkInteraction();
 
         // Mise à jour du Wave Manager
         this.waveManager.update(dt);

@@ -1,4 +1,5 @@
 import { WeaponTypes } from '../data/WeaponTypes.js';
+import { BestiaryEntries } from '../data/BestiaryData.js';
 
 export const GameState = {
     MENU: 'MENU',
@@ -30,6 +31,8 @@ export class GameManager {
         this.levelUpScreen = document.getElementById('levelup-screen');
         this.optionsScreen = document.getElementById('options-screen');
         this.creditsScreen = document.getElementById('credits-screen');
+        this.bestiaryScreen = document.getElementById('bestiary-screen');
+        this.bestiaryGrid = document.getElementById('bestiary-grid');
         this.cardsContainer = document.getElementById('cards-container');
         this.leaderboardList = document.getElementById('leaderboard-list');
 
@@ -55,6 +58,7 @@ export class GameManager {
         const backBtn = document.getElementById('back-btn');
         const lbCloseBtn = document.getElementById('leaderboard-close-btn');
         const wdCloseBtn = document.getElementById('wardrobe-close-btn');
+        const bestiaryCloseBtn = document.getElementById('bestiary-close-btn');
 
         // New Buttons
         const optionsBtn = document.getElementById('options-btn');
@@ -78,6 +82,7 @@ export class GameManager {
         if (backBtn) backBtn.addEventListener('click', () => this.closeShop());
         if (lbCloseBtn) lbCloseBtn.addEventListener('click', () => this.closeOverlay());
         if (wdCloseBtn) wdCloseBtn.addEventListener('click', () => this.closeOverlay());
+        if (bestiaryCloseBtn) bestiaryCloseBtn.addEventListener('click', () => this.closeOverlay());
 
         // New Listeners
         if (optionsBtn) optionsBtn.addEventListener('click', () => this.showOptions(GameState.MENU));
@@ -365,7 +370,7 @@ export class GameManager {
     }
 
     processEndGame(score) {
-        const data = this.game.saveSystem.load() || { gold: 0, highScores: [] };
+        const data = this.game.saveSystem.load() || { gold: 0, highScores: [], killCounts: {} };
         const goldEarned = Math.floor(score * 0.1);
 
         data.gold = (data.gold || 0) + goldEarned;
@@ -380,7 +385,59 @@ export class GameManager {
         // Keep top 10
         data.highScores = data.highScores.slice(0, 10);
 
+        // Merge Kills
+        const sessionKills = this.game.damageSystem.kills || {};
+        if (!data.killCounts) data.killCounts = {};
+
+        for (const [type, count] of Object.entries(sessionKills)) {
+            data.killCounts[type] = (data.killCounts[type] || 0) + count;
+        }
+
         this.game.saveSystem.save(data);
+    }
+
+    openBestiary() {
+        const data = this.game.saveSystem.load() || { killCounts: {} };
+        const kills = data.killCounts || {};
+
+        if (this.bestiaryGrid) {
+            this.bestiaryGrid.innerHTML = '';
+
+            for (const [key, entry] of Object.entries(BestiaryEntries)) {
+                const count = kills[key] || 0;
+                const unlocked = count >= entry.minKills;
+
+                const card = document.createElement('div');
+                card.style.background = '#222';
+                card.style.border = unlocked ? `2px solid ${entry.color}` : '2px solid #444';
+                card.style.borderRadius = '10px';
+                card.style.padding = '15px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.alignItems = 'center';
+                card.style.color = '#fff';
+
+                if (unlocked) {
+                    card.innerHTML = `
+                        <div style="width: 40px; height: 40px; background: ${entry.color}; border-radius: 50%; margin-bottom: 10px;"></div>
+                        <h3 style="color: ${entry.color};">${entry.name}</h3>
+                        <p style="font-size: 12px; color: #aaa; margin: 5px 0;">${entry.desc}</p>
+                        <p style="font-size: 14px; margin-top: auto;">Kills: ${count}</p>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div style="width: 40px; height: 40px; background: #333; border-radius: 50%; margin-bottom: 10px;">?</div>
+                        <h3 style="color: #666;">???</h3>
+                        <p style="font-size: 12px; color: #444; margin: 5px 0;">Defeat more to unlock.</p>
+                        <p style="font-size: 14px; margin-top: auto;">${count} / ${entry.minKills}</p>
+                    `;
+                }
+
+                this.bestiaryGrid.appendChild(card);
+            }
+        }
+
+        this.showScreen(this.bestiaryScreen);
     }
 
     showScreen(screen, hideOthers = true) {
@@ -399,5 +456,6 @@ export class GameManager {
         if (this.wardrobeScreen) this.wardrobeScreen.classList.add('hidden');
         if (this.optionsScreen) this.optionsScreen.classList.add('hidden');
         if (this.creditsScreen) this.creditsScreen.classList.add('hidden');
+        if (this.bestiaryScreen) this.bestiaryScreen.classList.add('hidden');
     }
 }

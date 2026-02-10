@@ -13,6 +13,7 @@ export class DamageSystem extends System {
         this.audioSystem = audioSystem;
         this.scoreElement = document.getElementById('score-display');
         this.score = 0;
+        this.kills = {}; // Map<type, count> for session
 
         // Cooldown pour les dégâts de contact (évite 60 hits/sec)
         this.contactDamageCooldowns = new Map(); // entityId -> timer
@@ -246,6 +247,11 @@ export class DamageSystem extends System {
     }
 
     killEntity(entity) {
+        // Track Kills for Bestiary
+        if (entity.name) {
+            this.kills[entity.name] = (this.kills[entity.name] || 0) + 1;
+        }
+
         // Trigger Victory if Boss
         if (entity.hasComponent('BossComponent')) {
             window.game.gameManager.triggerVictory(this.score);

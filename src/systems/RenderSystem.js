@@ -5,11 +5,15 @@ export class RenderSystem extends System {
     constructor(entityManager, ctx, width, height, physicsSystem, terraformationSystem) {
         super(entityManager);
         this.ctx = ctx;
-        this.width = width;
-        this.height = height;
+        this.width = width;   // Screen Width
+        this.height = height; // Screen Height
         this.physicsSystem = physicsSystem;
         this.terraformationSystem = terraformationSystem;
         this.debugMode = false;
+
+        this.camera = { x: 0, y: 0 };
+        this.mapGrid = null;
+        this.mapTileSize = 64;
 
         this.frameCount = 0;
         this.lastTime = performance.now();
@@ -20,19 +24,58 @@ export class RenderSystem extends System {
         this.debugMode = enabled;
     }
 
+    setMap(mapGrid, tileSize) {
+        this.mapGrid = mapGrid;
+        this.mapTileSize = tileSize;
+    }
+
+    updateCamera() {
+        // Find Player
+        const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
+        if (player) {
+            const t = player.getComponent('TransformComponent');
+            // Center camera on player
+            this.camera.x = t.x - this.width / 2;
+            this.camera.y = t.y - this.height / 2;
+        }
+
+        // Clamp to Map Bounds (if map exists)
+        if (this.mapGrid) {
+            const mapW = this.mapGrid[0].length * this.mapTileSize;
+            const mapH = this.mapGrid.length * this.mapTileSize;
+
+            this.camera.x = Math.max(0, Math.min(this.camera.x, mapW - this.width));
+            this.camera.y = Math.max(0, Math.min(this.camera.y, mapH - this.height));
+        }
+    }
+
     render(alpha) {
-        // 1. Effacer l'écran
+        this.updateCamera();
+
+        // 1. Clear Screen
         this.ctx.fillStyle = '#111';
         this.ctx.fillRect(0, 0, this.width, this.height);
 
-        // 1b. Dessiner le Terrain (Background)
+        this.ctx.save();
+        // Apply Camera Transform
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+
+        // 1b. Draw Map Tiles (Culling)
+        this.drawMap();
+
+        // 1c. Draw Terraformation (Background)
+        // Note: TerraformationSystem creates a canvas the size of the WORLD?
+        // No, currently initialized with screen width. It needs update.
+        // For now, assume renderTerrain handles its own or we draw entities.
+        // Actually, TerraformationSystem uses an offscreen canvas.
+        // We should draw it at 0,0 relative to world.
         if (this.terraformationSystem) {
-            this.terraformationSystem.renderTerrain(this.ctx);
+             this.terraformationSystem.renderTerrain(this.ctx);
         }
 
         const entities = this.entityManager.getEntities();
 
-        // 2. Filtrer et Trier par layer
+        // 2. Filter & Sort
         const renderables = [];
         const texts = [];
 
@@ -40,7 +83,12 @@ export class RenderSystem extends System {
             if (!entity.active) continue;
 
             if (entity.hasComponent('RenderComponent') && entity.hasComponent('TransformComponent')) {
-                renderables.push(entity);
+                // Frustum Culling
+                const t = entity.getComponent('TransformComponent');
+                if (t.x + 100 > this.camera.x && t.x - 100 < this.camera.x + this.width &&
+                    t.y + 100 > this.camera.y && t.y - 100 < this.camera.y + this.height) {
+                    renderables.push(entity);
+                }
             }
             if (entity.hasComponent('FloatingTextComponent') && entity.hasComponent('TransformComponent')) {
                 texts.push(entity);
@@ -53,18 +101,17 @@ export class RenderSystem extends System {
             return ra.layer - rb.layer;
         });
 
-        // 3. Dessiner les entités
+        // 3. Draw Entities
         for (const entity of renderables) {
             const transform = entity.getComponent('TransformComponent');
             const render = entity.getComponent('RenderComponent');
             const sprite = entity.getComponent('SpriteComponent');
 
-            // Gestion du Hit Flash (White Blink)
+            // Handle Hit Flash
             if (render.hitFlashTimer > 0) {
-                render.hitFlashTimer -= 0.016; // Approx dt, render receives alpha but we need logic update for visual timer
-                // Or handle in logic system? Render system is fine for visual only state.
+                render.hitFlashTimer -= 0.016;
                 this.ctx.save();
-                this.drawEntity(transform, render, sprite, '#ffffff', true); // Force white
+                this.drawEntity(transform, render, sprite, '#ffffff', true);
                 this.ctx.restore();
             } else {
                 this.ctx.save();
@@ -73,7 +120,7 @@ export class RenderSystem extends System {
             }
         }
 
-        // 3b. Dessiner les textes flottants
+        // 3b. Draw Floating Texts
         this.drawFloatingTexts(texts);
 
         // 4. Debug Draw
@@ -83,6 +130,41 @@ export class RenderSystem extends System {
 
         // 5. FPS Counter
         this.drawFPS();
+    }
+
+    drawMap() {
+        if (!this.mapGrid) return;
+
+        const startCol = Math.floor(this.camera.x / this.mapTileSize);
+        const endCol = Math.ceil((this.camera.x + this.width) / this.mapTileSize);
+        const startRow = Math.floor(this.camera.y / this.mapTileSize);
+        const endRow = Math.ceil((this.camera.y + this.height) / this.mapTileSize);
+
+        const rows = this.mapGrid.length;
+        const cols = this.mapGrid[0].length;
+
+        for (let r = startRow; r < endRow; r++) {
+            for (let c = startCol; c < endCol; c++) {
+                if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                    const tile = this.mapGrid[r][c];
+                    const x = c * this.mapTileSize;
+                    const y = r * this.mapTileSize;
+
+                    if (tile === 1) { // Wall
+                        this.ctx.fillStyle = '#444';
+                        this.ctx.fillRect(x, y, this.mapTileSize, this.mapTileSize);
+                        // Add some texture detail?
+                        this.ctx.fillStyle = '#222';
+                        this.ctx.fillRect(x + 5, y + 5, this.mapTileSize - 10, this.mapTileSize - 10);
+                    } else { // Floor
+                        this.ctx.fillStyle = '#1a1a1a'; // Slightly lighter than bg
+                        this.ctx.fillRect(x, y, this.mapTileSize, this.mapTileSize);
+                        this.ctx.strokeStyle = '#222';
+                        this.ctx.strokeRect(x, y, this.mapTileSize, this.mapTileSize);
+                    }
+                }
+            }
+        }
     }
 
     drawEntity(transform, render, sprite, color, isHitFlash) {
@@ -168,6 +250,8 @@ export class RenderSystem extends System {
     }
 
     drawFPS() {
+        this.ctx.restore(); // Restore Camera Transform (Draw UI in Screen Space)
+
         this.frameCount++;
         const now = performance.now();
         if (now - this.lastTime >= 1000) {
@@ -181,8 +265,9 @@ export class RenderSystem extends System {
         this.ctx.font = '16px monospace';
         this.ctx.fillText(`FPS: ${this.fps}`, 10, 20);
         this.ctx.fillText(`Entities: ${this.entityManager.getEntities().length}`, 10, 40);
+        this.ctx.fillText(`Cam: ${Math.round(this.camera.x)},${Math.round(this.camera.y)}`, 10, 60);
         if (this.debugMode) {
-             this.ctx.fillText(`DEBUG MODE ON`, 10, 60);
+             this.ctx.fillText(`DEBUG MODE ON`, 10, 80);
         }
         this.ctx.restore();
     }

@@ -8,6 +8,11 @@ export class MovementSystem extends System {
         this.worldHeight = height;
     }
 
+    setWorldBounds(width, height) {
+        this.worldWidth = width;
+        this.worldHeight = height;
+    }
+
     update(dt) {
         const entities = this.entityManager.getEntities();
 

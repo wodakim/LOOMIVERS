@@ -8,6 +8,19 @@ export class PhysicsSystem extends System {
         this.cols = Math.ceil(width / cellSize);
         this.rows = Math.ceil(height / cellSize);
         this.grid = new Map(); // Spatial Hash Grid : "col,row" -> [Entity]
+
+        // Map Grid (Static Walls)
+        this.mapGrid = null;
+        this.mapTileSize = 0;
+        this.mapRows = 0;
+        this.mapCols = 0;
+    }
+
+    setMap(mapGrid, tileSize) {
+        this.mapGrid = mapGrid;
+        this.mapTileSize = tileSize;
+        this.mapRows = mapGrid.length;
+        this.mapCols = mapGrid[0].length;
     }
 
     update(dt) {
@@ -31,9 +44,17 @@ export class PhysicsSystem extends System {
             }
         }
 
-        // 2. Check Collisions (Simplifié : Entités dans la même case)
-        // Dans une version complète, on vérifierait aussi les cases voisines pour les entités à cheval
-        // Pour la POC, on vérifie seulement intra-cellule.
+        // 2. Check Entity vs Map Collisions
+        if (this.mapGrid) {
+            const entities = this.entityManager.getEntities();
+            for (const entity of entities) {
+                if (entity.hasComponent('ColliderComponent') && entity.hasComponent('TransformComponent')) {
+                    this.resolveMapCollision(entity);
+                }
+            }
+        }
+
+        // 3. Check Entity vs Entity Collisions
         for (const [key, cellEntities] of this.grid) {
             if (cellEntities.length < 2) continue;
 
@@ -45,6 +66,60 @@ export class PhysicsSystem extends System {
                     this.resolveCollision(e1, e2);
                 }
             }
+        }
+    }
+
+    resolveMapCollision(entity) {
+        const transform = entity.getComponent('TransformComponent');
+        const collider = entity.getComponent('ColliderComponent');
+
+        // Ghost enemies ignore walls? Maybe. For now, assume ghosts fly through walls?
+        if (collider.tags.includes('ghost')) return;
+
+        const minCol = Math.floor((transform.x - collider.radius) / this.mapTileSize);
+        const maxCol = Math.floor((transform.x + collider.radius) / this.mapTileSize);
+        const minRow = Math.floor((transform.y - collider.radius) / this.mapTileSize);
+        const maxRow = Math.floor((transform.y + collider.radius) / this.mapTileSize);
+
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r < 0 || c < 0 || r >= this.mapRows || c >= this.mapCols) continue;
+
+                if (this.mapGrid[r][c] === 1) {
+                    this.resolveCircleRect(transform, collider.radius, c * this.mapTileSize, r * this.mapTileSize, this.mapTileSize, this.mapTileSize);
+                }
+            }
+        }
+    }
+
+    resolveCircleRect(circle, radius, rx, ry, rw, rh) {
+        // Find closest point on rect to circle center
+        const closestX = Math.max(rx, Math.min(circle.x, rx + rw));
+        const closestY = Math.max(ry, Math.min(circle.y, ry + rh));
+
+        const dx = circle.x - closestX;
+        const dy = circle.y - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < radius * radius && distSq > 0) {
+            const dist = Math.sqrt(distSq);
+            const overlap = radius - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            circle.x += nx * overlap;
+            circle.y += ny * overlap;
+        } else if (distSq === 0) {
+            // Inside the wall: Push out shortest path
+            const dL = circle.x - rx;
+            const dR = (rx + rw) - circle.x;
+            const dT = circle.y - ry;
+            const dB = (ry + rh) - circle.y;
+
+            const min = Math.min(dL, dR, dT, dB);
+            if (min === dL) circle.x -= (dL + radius);
+            else if (min === dR) circle.x += (dR + radius);
+            else if (min === dT) circle.y -= (dT + radius);
+            else circle.y += (dB + radius);
         }
     }
 

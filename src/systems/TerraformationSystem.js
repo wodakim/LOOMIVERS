@@ -28,6 +28,15 @@ export class TerraformationSystem extends System {
         this.ctx.clearRect(0, 0, this.width, this.height);
     }
 
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.bgCanvas.width = width;
+        this.bgCanvas.height = height;
+        this.zones = []; // Clear zones on resize/map change
+        this.ctx.clearRect(0, 0, width, height);
+    }
+
     /**
      * Ajoute un cratère ou une zone d'effet.
      * @param {number} x
