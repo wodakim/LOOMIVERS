@@ -66,26 +66,22 @@ class Game {
         // Initialisation des cœurs (Reset)
         this.entityManager = new EntityManager();
         this.inputHandler = new InputHandler();
-        // SaveSystem et UpgradeManager sont persistants, pas besoin de les recréer
 
         // Wave Manager (Director)
         this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
 
         // Initialisation des Systèmes
-        // Ordre CRITIQUE : Input -> Logic -> Physics -> Render
-        // Note: On instancie PhysicsSystem tôt pour l'injecter dans l'IA (Separation/Flocking)
         this.physicsSystem = new PhysicsSystem(this.entityManager, this.canvas.width, this.canvas.height);
 
         this.inputSystem = new InputSystem(this.entityManager, this.inputHandler);
-        this.aiSystem = new AISystem(this.entityManager, this.physicsSystem); // Injection Physics pour grid neighbor search
-        this.combatSystem = new CombatSystem(this.entityManager, this.audioSystem); // Injection Audio
+        this.aiSystem = new AISystem(this.entityManager, this.physicsSystem);
+        this.combatSystem = new CombatSystem(this.entityManager, this.audioSystem);
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
-        // this.physicsSystem déjà instancié plus haut
         this.particleSystem = new ParticleSystem(this.entityManager);
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
-        this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem, this.audioSystem); // Injection Audio
-        this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem); // Injection Audio
-        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem, this.audioSystem); // Injection Audio
+        this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem, this.audioSystem);
+        this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem);
+        this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem, this.audioSystem);
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.uiSystem = new UISystem(this.entityManager);
         this.seoSystem = new SEOSystem(this.entityManager);
@@ -93,7 +89,6 @@ class Game {
         this.entityManager.registerSystem(this.inputSystem);
         this.entityManager.registerSystem(this.aiSystem);
         this.entityManager.registerSystem(this.combatSystem);
-        // Terraformation avant Movement pour appliquer les effets (ralentissement)
         this.entityManager.registerSystem(this.terraformationSystem);
         this.entityManager.registerSystem(this.movementSystem);
         this.entityManager.registerSystem(this.physicsSystem);
@@ -102,10 +97,6 @@ class Game {
         this.entityManager.registerSystem(this.progressionSystem);
         this.entityManager.registerSystem(this.alchemySystem);
         this.entityManager.registerSystem(this.uiSystem);
-
-        // Demo Terraformation : Ajouter des zones initiales
-        this.terraformationSystem.addZone(200, 200, 100, 'water');
-        this.terraformationSystem.addZone(600, 400, 80, 'fire');
 
         // Configuration
         this.debugMode = true;
@@ -120,59 +111,36 @@ class Game {
         console.log('Genesis Survivor Engine (GSE-v1) initialized. Waiting for start.');
     }
 
-    start() {
-        // Resume Audio Context on user interaction (Start Game)
-        this.audioSystem.init();
-
-        this.initWorld();
-        // Appliquer les upgrades permanentes au joueur
-        const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
-        if (player) {
-            this.upgradeManager.applyPlayerStats(player);
-
-            // Check Weapon Unlocks
-            if (this.upgradeManager.upgrades['unlock_whip'].level > 0) {
-                const w = player.getComponent('WeaponComponent');
-                Object.assign(w, WeaponTypes.WHIP);
-            }
-            // Note: Aura would be a second weapon component or entity in a full system.
-            // Here, last unlock wins for main weapon slot.
-        }
-        this.gameLoop.start();
-    }
-
-    stop() {
-        this.gameLoop.stop();
-    }
-
-    reset() {
-        this.stop();
-        // TODO: Clean up all entities properly via EntityManager.clear() or creating new instance
-        // Pour la POC : On recrée tout l'engine pour être sûr
-        this.initEngine();
-    }
-
-    resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        // Si le système de mouvement ou de physique dépend des limites, il faudrait les mettre à jour ici
-        if (this.movementSystem) {
-            this.movementSystem.worldWidth = this.canvas.width;
-            this.movementSystem.worldHeight = this.canvas.height;
-        }
-        if (this.physicsSystem) {
-             // Idéalement reconstruire la grille ou mettre à jour les dimensions
-             this.physicsSystem.cols = Math.ceil(this.canvas.width / this.physicsSystem.cellSize);
-             this.physicsSystem.rows = Math.ceil(this.canvas.height / this.physicsSystem.cellSize);
-        }
-        if (this.renderSystem) {
-            this.renderSystem.width = this.canvas.width;
-            this.renderSystem.height = this.canvas.height;
-        }
-    }
-
+    // Called for Run
     initWorld() {
-        // 1. Création du Héro (Carré Bleu)
+        // Reset systems relevant to runs
+        this.waveManager = new WaveManager(this.entityManager, this.canvas.width, this.canvas.height);
+
+        // Demo Terraformation : Ajouter des zones initiales
+        this.terraformationSystem.zones = []; // Reset zones
+        this.terraformationSystem.addZone(200, 200, 100, 'water');
+        this.terraformationSystem.addZone(600, 400, 80, 'fire');
+
+        this.createPlayer(true); // Can shoot
+    }
+
+    // Called for HUB
+    initHub() {
+        this.terraformationSystem.zones = [];
+        this.createPlayer(false); // Can't shoot
+
+        // Add POIs
+        // Leaderboard
+        this.createPOI(200, 200, '#ff00ff', 'Leaderboard');
+        // Wardrobe
+        this.createPOI(600, 200, '#00ffff', 'Wardrobe');
+        // Bestiary
+        this.createPOI(200, 500, '#00ff00', 'Bestiary');
+        // Portal
+        this.createPOI(400, 400, '#ff0000', 'PORTAL (Start)', true);
+    }
+
+    createPlayer(canShoot) {
         const hero = this.entityManager.createEntity();
         hero.tags.add('player');
 
@@ -183,23 +151,10 @@ class Game {
 
         hero.addComponent(new VelocityComponent());
         const v = hero.getComponent('VelocityComponent');
-        v.speed = 300; // Pixels par seconde
+        v.speed = 300;
 
         hero.addComponent(new InputComponent());
-
-        // Dash
         hero.addComponent(new DashComponent());
-
-        // Ajout de l'arme par défaut
-        hero.addComponent(new WeaponComponent());
-        const weapon = hero.getComponent('WeaponComponent');
-        weapon.fireRate = 1.5; // Was 2 (Nerf)
-        weapon.damage = 15; // Was 25 (Nerf)
-        weapon.range = 400;
-
-        // Le Héro tire du FEU
-        hero.addComponent(new ElementalComponent());
-        hero.getComponent('ElementalComponent').tags.add('fire');
 
         hero.addComponent(new ColliderComponent());
         const c = hero.getComponent('ColliderComponent');
@@ -207,23 +162,115 @@ class Game {
         c.tags = ['player'];
 
         hero.addComponent(new HealthComponent());
-        hero.getComponent('HealthComponent').current = 1000; // Le héros est tanky
+        hero.getComponent('HealthComponent').current = 1000;
 
-        hero.addComponent(new LevelComponent()); // Pour l'XP
+        hero.addComponent(new LevelComponent());
 
         hero.addComponent(new RenderComponent());
         const r = hero.getComponent('RenderComponent');
-        r.color = '#00ccff'; // Bleu Cyan
+        r.color = '#00ccff';
         r.shape = 'rect';
         r.width = 40;
         r.height = 40;
         r.layer = 10;
 
+        if (canShoot) {
+            hero.addComponent(new WeaponComponent());
+            const weapon = hero.getComponent('WeaponComponent');
+            weapon.fireRate = 1.5;
+            weapon.damage = 15;
+            weapon.range = 400;
+
+            hero.addComponent(new ElementalComponent());
+            hero.getComponent('ElementalComponent').tags.add('fire');
+
+            this.upgradeManager.applyPlayerStats(hero);
+        }
     }
 
-    // (spawnEnemy déplacé dans WaveManager)
+    createPOI(x, y, color, label, isPortal = false) {
+        const poi = this.entityManager.createEntity();
+        poi.tags.add('poi');
+        if (isPortal) poi.tags.add('portal');
+
+        poi.addComponent(new TransformComponent());
+        poi.getComponent('TransformComponent').x = x;
+        poi.getComponent('TransformComponent').y = y;
+
+        poi.addComponent(new RenderComponent());
+        const r = poi.getComponent('RenderComponent');
+        r.color = color;
+        r.shape = 'rect'; // Should be sprite/icon
+        r.width = 60;
+        r.height = 60;
+        r.layer = 1;
+
+        // Interactable Component (Custom, or just use Collider/Name for now)
+        // We'll rely on simple collision check in Update loop or specific system
+        poi.label = label; // Hack: direct property
+
+        poi.addComponent(new ColliderComponent());
+        const c = poi.getComponent('ColliderComponent');
+        c.radius = 50;
+        c.isTrigger = true;
+    }
+
+    start() {
+        // Resume Audio Context on user interaction (Start Game)
+        this.audioSystem.init();
+
+        // Enter HUB by default now
+        this.gameManager.enterHub();
+    }
+
+    stop() {
+        this.gameLoop.stop();
+    }
+
+    reset() {
+        this.stop();
+        this.initEngine();
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        if (this.movementSystem) {
+            this.movementSystem.worldWidth = this.canvas.width;
+            this.movementSystem.worldHeight = this.canvas.height;
+        }
+        if (this.physicsSystem) {
+             this.physicsSystem.cols = Math.ceil(this.canvas.width / this.physicsSystem.cellSize);
+             this.physicsSystem.rows = Math.ceil(this.canvas.height / this.physicsSystem.cellSize);
+        }
+        if (this.renderSystem) {
+            this.renderSystem.width = this.canvas.width;
+            this.renderSystem.height = this.canvas.height;
+        }
+    }
 
     update(dt) {
+        // HUB Logic Loop check
+        if (this.gameManager.state === GameState.HUB) {
+            // Check Portal interaction
+            const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
+            const portal = this.entityManager.getEntities().find(e => e.tags.has('portal'));
+            if (player && portal) {
+                const pt = player.getComponent('TransformComponent');
+                const portalt = portal.getComponent('TransformComponent');
+                const dx = pt.x - portalt.x;
+                const dy = pt.y - portalt.y;
+                if (dx*dx + dy*dy < 50*50) {
+                    this.gameManager.startGame(); // Trigger run
+                    return;
+                }
+            }
+
+            // Still update ECS for movement
+            this.entityManager.update(dt);
+            return;
+        }
+
         if (this.gameManager.state !== GameState.PLAYING) return;
 
         // Mise à jour du Wave Manager

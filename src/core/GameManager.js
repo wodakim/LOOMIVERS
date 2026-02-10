@@ -2,6 +2,7 @@ import { WeaponTypes } from '../data/WeaponTypes.js';
 
 export const GameState = {
     MENU: 'MENU',
+    HUB: 'HUB',
     PLAYING: 'PLAYING',
     PAUSED: 'PAUSED',
     GAMEOVER: 'GAMEOVER',
@@ -42,9 +43,9 @@ export class GameManager {
         const shopBtn = document.getElementById('shop-btn');
         const backBtn = document.getElementById('back-btn');
 
-        if (startBtn) startBtn.addEventListener('click', () => this.startGame());
-        if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
-        if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', () => this.restartGame());
+        if (startBtn) startBtn.addEventListener('click', () => this.enterHub());
+        if (restartBtn) restartBtn.addEventListener('click', () => this.enterHub());
+        if (victoryRestartBtn) victoryRestartBtn.addEventListener('click', () => this.enterHub());
 
         if (shopBtn) {
             shopBtn.addEventListener('click', () => {
@@ -94,6 +95,37 @@ export class GameManager {
         }
     }
 
+    enterHub() {
+        console.log('Entering HUB...');
+        this.state = GameState.HUB;
+        this.hideAllScreens();
+
+        // Reset Logic but keep upgrades
+        this.game.reset(); // Will trigger initWorld
+
+        // Setup HUB World
+        this.game.initHub();
+
+        this.game.gameLoop.start();
+    }
+
+    startGame() {
+        console.log('Game Starting (Run)...');
+        this.state = GameState.PLAYING;
+        // Clean Entities (Remove Hub POIs)
+        // Re-init World for Run
+        this.game.reset();
+        this.game.initWorld(); // Run Setup
+        this.game.gameLoop.start();
+    }
+
+    // ... (Existing methods: showLevelUp, closeLevelUp, restartGame, openShop, closeShop, buyUpgrade, updateShopUI) ...
+    // Note: restartGame now calls enterHub instead of startGame directly in UI buttons.
+
+    restartGame() {
+        this.enterHub();
+    }
+
     showLevelUp(choices, onSelectCallback) {
         this.state = GameState.LEVELUP;
         this.game.stop();
@@ -104,7 +136,6 @@ export class GameManager {
             const card = document.createElement('div');
             card.className = 'card';
 
-            // Icon Logic (Simple Text/Char)
             let icon = '?';
             if (choice.type === 'stat') icon = '⚡';
             if (choice.type === 'heal') icon = '❤';
@@ -131,18 +162,6 @@ export class GameManager {
         this.state = GameState.PLAYING;
         this.levelUpScreen.classList.add('hidden');
         this.game.gameLoop.start();
-    }
-
-    startGame() {
-        console.log('Game Starting...');
-        this.state = GameState.PLAYING;
-        this.hideAllScreens();
-        this.game.start();
-    }
-
-    restartGame() {
-        this.game.reset();
-        this.startGame();
     }
 
     openShop() {

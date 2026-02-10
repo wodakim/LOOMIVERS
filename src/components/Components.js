@@ -142,7 +142,7 @@ export class ColliderComponent extends Component {
         this.width = 32;
         this.height = 32;
         this.isTrigger = false;
-        this.tags = []; // 'player', 'enemy', 'wall', 'ghost'
+        this.tags = []; // 'player', 'enemy', 'wall', 'ghost', 'poi', 'portal'
     }
 
     reset() {
@@ -151,5 +151,20 @@ export class ColliderComponent extends Component {
         this.height = 32;
         this.isTrigger = false;
         this.tags = [];
+    }
+}
+
+export class InteractableComponent extends Component {
+    constructor() {
+        super();
+        this.label = 'Interact';
+        this.action = 'none'; // 'portal', 'leaderboard', 'wardrobe', 'bestiary'
+        this.isHovered = false;
+    }
+
+    reset() {
+        this.label = 'Interact';
+        this.action = 'none';
+        this.isHovered = false;
     }
 }

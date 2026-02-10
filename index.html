@@ -112,6 +112,25 @@
                 </div>
             </div>
 
+            <div id="leaderboard-screen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
+                <h1>LEADERBOARD</h1>
+                <ul id="leaderboard-list" style="list-style: none; font-size: 24px; margin-bottom: 20px;">
+                    <!-- Scores injected by JS -->
+                </ul>
+                <button id="leaderboard-close-btn" class="btn">CLOSE</button>
+            </div>
+
+            <div id="wardrobe-screen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
+                <h1>WARDROBE</h1>
+                <p>Select Color Scheme</p>
+                <div style="display: flex; gap: 20px; margin: 20px;">
+                    <div class="color-swatch" style="background: #00ccff;" data-color="#00ccff">CYAN</div>
+                    <div class="color-swatch" style="background: #ff00ff;" data-color="#ff00ff">MAGENTA</div>
+                    <div class="color-swatch" style="background: #ffff00;" data-color="#ffff00">YELLOW</div>
+                </div>
+                <button id="wardrobe-close-btn" class="btn">CLOSE</button>
+            </div>
+
             <!-- HUD (Visible uniquement en jeu, géré par CSS si on veut, ou JS) -->
             <div id="health-bar-container">
                 <div id="health-bar"></div>

@@ -1,6 +1,7 @@
 import { System } from '../ecs/System.js';
 import { HealthComponent, ScoreComponent } from '../components/StatsComponents.js';
 import { LevelComponent } from '../components/ProgressionComponents.js';
+import { InteractableComponent, TransformComponent } from '../components/Components.js';
 
 export class UISystem extends System {
     constructor(entityManager) {
@@ -15,36 +16,42 @@ export class UISystem extends System {
         this.bossHealthFill = document.getElementById('boss-health-fill');
         this.timerDisplay = document.getElementById('time-display');
 
-        this.lastScore = -1;
+        // Context for drawing floating arrows (using a secondary canvas or main canvas in RenderSystem?)
+        // RenderSystem clears canvas every frame.
+        // UISystem is updated AFTER RenderSystem in main.js?
+        // No, UI updates DOM elements usually. But for "floating arrows in canvas", RenderSystem is better.
+        // HOWEVER, we can use absolute positioned DOM elements for POI labels to keep text sharp and accessible.
+
+        this.poiContainer = document.getElementById('ui-layer');
+        this.poiLabels = new Map(); // entityId -> DOM Element
     }
 
     update(dt) {
         const entities = this.entityManager.getEntities();
         let player = null;
         let boss = null;
+        const pois = [];
 
         // 1. Find relevant entities
         for (const entity of entities) {
             if (entity.active) {
-                if (entity.tags.has('player')) {
-                    player = entity;
-                }
-                if (entity.hasComponent('BossComponent')) {
-                    boss = entity;
-                }
+                if (entity.tags.has('player')) player = entity;
+                if (entity.hasComponent('BossComponent')) boss = entity;
+                // Check hacky label property or component
+                // We added 'label' prop in main.js createPOI, better use component now if we refactored
+                // But for now let's check tag 'poi'
+                if (entity.tags.has('poi')) pois.push(entity);
             }
         }
 
         // 2. Update Player UI
         if (player) {
-            // Health
             if (this.healthBar && player.hasComponent('HealthComponent')) {
                 const health = player.getComponent('HealthComponent');
                 const pct = Math.max(0, (health.current / health.max) * 100);
                 this.healthBar.style.width = `${pct}%`;
             }
 
-            // XP & Level
             if (this.xpBar && this.levelDisplay && player.hasComponent('LevelComponent')) {
                 const level = player.getComponent('LevelComponent');
                 const xpPct = (level.currentXP / level.nextLevelXP) * 100;
@@ -62,14 +69,50 @@ export class UISystem extends System {
             const pct = Math.max(0, (health.current / health.max) * 100);
             this.bossHealthFill.style.width = `${pct}%`;
         } else if (this.bossHealthContainer && !this.bossHealthContainer.classList.contains('hidden')) {
-            // Hide if no boss
             this.bossHealthContainer.classList.add('hidden');
         }
 
-        // 4. Score is handled by DamageSystem for logic, but we can display it here centrally if we shared state.
-        // Currently DamageSystem updates text directly. We'll leave it there or move it later.
-        // But for cleaner architecture, let's look for a global score state or assume DamageSystem does it.
-        // Actually, DamageSystem has 'score' prop.
-        // For now, DamageSystem handles Score UI update.
+        // 4. Update POI Labels (Floating DOM)
+        // Cleanup old labels
+        for (const [id, el] of this.poiLabels) {
+            if (!entities.find(e => e.id === id && e.active)) {
+                el.remove();
+                this.poiLabels.delete(id);
+            }
+        }
+
+        // Create/Update labels
+        for (const poi of pois) {
+            let el = this.poiLabels.get(poi.id);
+            if (!el) {
+                el = document.createElement('div');
+                el.className = 'poi-label';
+                el.innerHTML = `<div class="arrow">⬇</div><span>${poi.label || 'POI'}</span>`;
+                this.poiContainer.appendChild(el);
+                this.poiLabels.set(poi.id, el);
+            }
+
+            // Position (World to Screen)
+            // Assuming Camera is static at (0,0) offset but centered?
+            // In RenderSystem we translate center?
+            // Actually RenderSystem translates to entity position.
+            // We need to know where the camera is.
+            // In this engine, camera is static?
+            // Wait, RenderSystem does: ctx.translate(transform.x, transform.y) ONLY for the entity.
+            // It does NOT have a global camera translate. The player moves ON SCREEN?
+            // Checking MovementSystem: transform.x += velocity.
+            // If the canvas covers the whole world, then x/y are screen coordinates (if world = screen).
+            // But main.js sets canvas.width = window.innerWidth.
+            // And logic uses this.canvas.width.
+            // So Entity (x,y) IS Screen (x,y).
+
+            const t = poi.getComponent('TransformComponent');
+            if (t) {
+                el.style.left = `${t.x}px`;
+                el.style.top = `${t.y - 60}px`; // Offset above
+
+                // Bobbing effect handled via CSS animation usually
+            }
+        }
     }
 }
