@@ -199,21 +199,33 @@ export class GameManager {
         this.state = GameState.LEVELUP;
         this.game.stop();
 
+        // If choices is empty (e.g. maxed out), use generic heal?
+        // But for now we assume choices provided by ProgressionSystem or TraitSystem
+
         this.cardsContainer.innerHTML = '';
+
+        // Use TraitSystem to get options if choices not provided (or mixed)
+        // Currently ProgressionSystem handles this.
+        // Let's assume choices are passed correctly.
 
         choices.forEach(choice => {
             const card = document.createElement('div');
             card.className = 'card';
+            if (choice.rarity) card.classList.add(choice.rarity); // css styling
 
             let icon = '?';
             if (choice.type === 'stat') icon = '⚡';
             if (choice.type === 'heal') icon = '❤';
             if (choice.type === 'weapon') icon = '⚔';
+            if (choice.type === 'weapon_mod' || choice.type === 'projectile_mod') icon = '🔮';
+
+            const color = choice.rarity === 'legendary' ? '#ffaa00' : (choice.rarity === 'rare' ? '#00ccff' : '#ffffff');
 
             card.innerHTML = `
-                <div class="card-icon">${icon}</div>
-                <h3>${choice.name}</h3>
-                <p>${choice.description}</p>
+                <div class="card-icon" style="color:${color}; border-color:${color};">${icon}</div>
+                <h3 style="color:${color};">${choice.name}</h3>
+                <p style="color:#ccc;">${choice.description || choice.desc}</p>
+                ${choice.rarity ? `<span style="font-size:10px; text-transform:uppercase; color:${color};">${choice.rarity}</span>` : ''}
             `;
 
             card.addEventListener('click', () => {

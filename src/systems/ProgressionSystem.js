@@ -99,14 +99,28 @@ export class ProgressionSystem extends System {
 
         level.isLevelingUp = true; // Pause logic in next update
 
-        // Generate Choices
-        const choices = this.generateUpgradeChoices();
+        // Generate Choices using TraitSystem if available
+        let choices = [];
+        if (window.game.traitSystem) {
+            choices = window.game.traitSystem.getAvailableOptions();
+        } else {
+            // Fallback
+            choices = this.generateFallbackChoices();
+        }
 
-        // Call GameManager to show UI
-        // Assuming global access or passed in constructor.
-        // For POC: window.game
+        // Fallback for empty (maxed out?)
+        if (choices.length === 0) {
+            choices.push({ type: 'heal', name: 'Full Heal', description: 'Restore all HP', rarity: 'common', effect: () => {} });
+        }
+
         window.game.gameManager.showLevelUp(choices, (selectedChoice) => {
-            this.applyUpgrade(player, selectedChoice);
+            if (window.game.traitSystem && selectedChoice.id) {
+                window.game.traitSystem.applyTrait(selectedChoice.id);
+            } else if (selectedChoice.effect) {
+                // Fallback effect
+                this.applyFallbackUpgrade(player, selectedChoice);
+            }
+
             // Resume
             level.currentXP -= level.nextLevelXP;
             level.level++;
@@ -115,39 +129,17 @@ export class ProgressionSystem extends System {
         });
     }
 
-    generateUpgradeChoices() {
-        const pool = [
-            { type: 'stat', id: 'dmg', name: 'Damage Boost', description: 'Increase Damage by 2' },
-            { type: 'stat', id: 'speed', name: 'Speed Boost', description: 'Increase Speed by 10%' },
-            { type: 'stat', id: 'fire', name: 'Rapid Fire', description: 'Fire Rate +10%' },
-            { type: 'heal', id: 'heal', name: 'Full Heal', description: 'Restore all HP' },
-            { type: 'stat', id: 'hp', name: 'Max Health', description: 'Max HP +20' }
+    generateFallbackChoices() {
+        return [
+            { type: 'heal', id: 'heal', name: 'Full Heal', description: 'Restore all HP', rarity: 'common' }
         ];
-
-        // Pick 3 random
-        const choices = [];
-        for (let i = 0; i < 3; i++) {
-            const rand = Math.floor(Math.random() * pool.length);
-            choices.push(pool[rand]);
-        }
-        return choices;
     }
 
-    applyUpgrade(player, choice) {
-        const weapon = player.getComponent('WeaponComponent');
-        const health = player.getComponent('HealthComponent');
-        const velocity = player.getComponent('VelocityComponent');
-
-        if (choice.id === 'dmg') weapon.damage += 2;
-        if (choice.id === 'speed') velocity.speed *= 1.1;
-        if (choice.id === 'fire') weapon.fireRate *= 1.1;
-        if (choice.id === 'heal') health.current = health.max;
-        if (choice.id === 'hp') {
-            health.max += 20;
-            health.current += 20;
+    applyFallbackUpgrade(player, choice) {
+        if (choice.id === 'heal') {
+            const h = player.getComponent('HealthComponent');
+            h.current = h.max;
         }
-
-        console.log(`Applied Upgrade: ${choice.name}`);
     }
 
     spawnXPGem(x, y, value) {

@@ -137,6 +137,12 @@ export class PhysicsSystem extends System {
             }
         }
 
+        // --- NEW FIX: SKIP PROJECTILE COLLISIONS ---
+        // Projectiles should be triggers (DamageSystem handles them),
+        // they should NOT physically push entities around.
+        if (c1.isTrigger || c2.isTrigger) return;
+        // -------------------------------------------
+
         const dx = t1.x - t2.x;
         const dy = t1.y - t2.y;
         const distSq = dx * dx + dy * dy;

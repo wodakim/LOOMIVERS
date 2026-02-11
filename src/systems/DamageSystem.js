@@ -160,9 +160,8 @@ export class DamageSystem extends System {
             if (!isValidTarget) continue;
 
             if (target.hasComponent('ColliderComponent') && target.hasComponent('HealthComponent') && target.hasComponent('TransformComponent')) {
-                // Dash Invincibility for Projectiles (optional)
                 if (target.hasComponent('DashComponent') && target.getComponent('DashComponent').isDashing) {
-                    continue; // Dodge bullet
+                    continue;
                 }
 
                 const targetTransform = target.getComponent('TransformComponent');
@@ -174,6 +173,29 @@ export class DamageSystem extends System {
                 const minDist = projectileCollider.radius + targetCollider.radius;
 
                 if (distSq < minDist * minDist) {
+                    // Check Trait Mods
+                    if (projectileEntity.mods) {
+                        // Pierce
+                        if (projectileEntity.mods.has('pierce')) {
+                            projectileEntity.pierceCount = (projectileEntity.pierceCount || 0) + 1;
+                            if (projectileEntity.pierceCount > 2) { // Allow 2 hits (Pierce 1 + base)
+                                this.entityManager.removeEntity(projectileEntity);
+                            }
+                        } else {
+                            this.entityManager.removeEntity(projectileEntity);
+                        }
+
+                        // Explosion
+                        if (projectileEntity.mods.has('explosive')) {
+                            // Spawn simple explosion logic?
+                            // For now just Area Damage
+                            // TODO: Add proper explosion effect
+                        }
+                    } else {
+                        // Default behavior: destroy on hit
+                        this.entityManager.removeEntity(projectileEntity);
+                    }
+
                     // Critical Hit Calculation
                     const isCrit = Math.random() < 0.1; // 10% Chance
                     const finalDamage = isCrit ? projectileData.damage * 2 : projectileData.damage;
@@ -184,8 +206,7 @@ export class DamageSystem extends System {
                         this.alchemySystem.onProjectileHit(projectileEntity, target);
                     }
 
-                    this.entityManager.removeEntity(projectileEntity);
-                    return;
+                    return; // Hit handled
                 }
             }
         }

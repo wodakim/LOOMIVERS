@@ -104,7 +104,26 @@ export class CombatSystem extends System {
         }
 
         if (target) {
-            this.fireProjectile(entity, target, weapon);
+            // Multishot Handling
+            const count = weapon.projectileCount || 1;
+
+            if (count === 1) {
+                this.fireProjectile(entity, target, weapon);
+            } else {
+                // Fan Fire
+                // Calculate angle to target
+                const transform = entity.getComponent('TransformComponent');
+                const targetTransform = target.getComponent('TransformComponent');
+                const dx = targetTransform.x - transform.x;
+                const dy = targetTransform.y - transform.y;
+                const baseAngle = Math.atan2(dy, dx);
+
+                const spread = 0.2; // Radians
+                for(let i=0; i<count; i++) {
+                    const angleOffset = -spread/2 + (spread / (count-1)) * i;
+                    this.fireProjectile(entity, target, weapon, baseAngle + angleOffset);
+                }
+            }
             weapon.cooldown = 1 / weapon.fireRate;
         }
     }
@@ -356,7 +375,7 @@ export class CombatSystem extends System {
         }
     }
 
-    fireProjectile(source, target, weapon) {
+    fireProjectile(source, target, weapon, forcedAngle = null) {
         const sourceTransform = source.getComponent('TransformComponent');
         const targetTransform = target.getComponent('TransformComponent');
 
@@ -364,26 +383,35 @@ export class CombatSystem extends System {
             this.audioSystem.playShoot();
         }
 
-        // Création du projectile via l'EntityManager (qui utilise le Pool)
         const projectile = this.entityManager.createEntity();
         projectile.tags.add('projectile');
 
-        // Position initiale (centre du tireur)
         projectile.addComponent(new TransformComponent());
         const t = projectile.getComponent('TransformComponent');
         t.x = sourceTransform.x;
         t.y = sourceTransform.y;
 
-        // Calcul de la direction
-        const dx = targetTransform.x - sourceTransform.x;
-        const dy = targetTransform.y - sourceTransform.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+        let vx, vy;
+        if (forcedAngle !== null) {
+            vx = Math.cos(forcedAngle) * weapon.projectileSpeed;
+            vy = Math.sin(forcedAngle) * weapon.projectileSpeed;
+        } else {
+            const dx = targetTransform.x - sourceTransform.x;
+            const dy = targetTransform.y - sourceTransform.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            vx = (dx / dist) * weapon.projectileSpeed;
+            vy = (dy / dist) * weapon.projectileSpeed;
+        }
 
-        // Vélocité
         projectile.addComponent(new VelocityComponent());
         const v = projectile.getComponent('VelocityComponent');
-        v.vx = (dx / dist) * weapon.projectileSpeed;
-        v.vy = (dy / dist) * weapon.projectileSpeed;
+        v.vx = vx;
+        v.vy = vy;
+
+        // Mods from Weapon (Traits)
+        if (weapon.mods && weapon.mods.size > 0) {
+            projectile.mods = new Set(weapon.mods); // Copy mods to projectile
+        }
 
         // Rendu
         projectile.addComponent(new RenderComponent());

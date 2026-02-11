@@ -41,6 +41,7 @@ import { ElementalComponent } from './components/ElementalComponents.js';
 import { WaveManager } from './core/WaveManager.js';
 import { GameManager, GameState } from './core/GameManager.js';
 import { UpgradeManager } from './core/UpgradeManager.js';
+import { TraitSystem } from './systems/TraitSystem.js';
 import { WeaponTypes } from './data/WeaponTypes.js';
 import { AssetSources, Animations } from './data/AssetManifest.js';
 
@@ -66,6 +67,10 @@ class Game {
         this.playerColor = '#00ccff'; // Default
         this.gameManager = new GameManager(this);
 
+        // --- NEW FIX: POI INTERACTION STATE ---
+        this.activeInteractions = new Set(); // Stores POI IDs currently inside
+        // --------------------------------------
+
         this.initEngine();
     }
 
@@ -88,6 +93,7 @@ class Game {
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem, this.audioSystem);
         this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem);
+        this.traitSystem = new TraitSystem(this.entityManager, this.progressionSystem);
         this.damageSystem = new DamageSystem(this.entityManager, this.physicsSystem, this.particleSystem, this.progressionSystem, this.alchemySystem, this.audioSystem);
         this.renderSystem = new RenderSystem(this.entityManager, this.ctx, this.canvas.width, this.canvas.height, this.physicsSystem, this.terraformationSystem);
         this.uiSystem = new UISystem(this.entityManager);
@@ -337,13 +343,28 @@ class Game {
                 const interact = poi.getComponent('InteractableComponent');
                 const dx = pt.x - poit.x;
                 const dy = pt.y - poit.y;
-                if (dx*dx + dy*dy < 50*50) {
-                    if (interact.action === 'portal') this.gameManager.startGame();
-                    else if (interact.action === 'leaderboard') this.gameManager.showLeaderboard();
-                    else if (interact.action === 'wardrobe') this.gameManager.showWardrobe();
-                    else if (interact.action === 'shop') this.gameManager.openShop();
-                    else if (interact.action === 'bestiary') console.log('Bestiary locked.');
-                    else if (interact.action === 'end_run') this.gameManager.triggerVictory(this.damageSystem.score);
+                const isInside = (dx*dx + dy*dy < 50*50); // 50px radius
+
+                if (isInside) {
+                    if (!this.activeInteractions.has(poi.id)) {
+                        // ENTER EVENT
+                        this.activeInteractions.add(poi.id);
+                        if (interact.action === 'portal') this.gameManager.startGame();
+                        else if (interact.action === 'leaderboard') this.gameManager.showLeaderboard();
+                        else if (interact.action === 'wardrobe') this.gameManager.showWardrobe();
+                        else if (interact.action === 'shop') this.gameManager.openShop();
+                        else if (interact.action === 'bestiary') this.gameManager.openBestiary();
+                        else if (interact.action === 'end_run') this.gameManager.triggerVictory(this.damageSystem.score);
+                    }
+                } else {
+                    if (this.activeInteractions.has(poi.id)) {
+                        // EXIT EVENT
+                        this.activeInteractions.delete(poi.id);
+                        // Optional: close if needed, but GameManager handles explicit 'Back' buttons.
+                        // We assume UI stays open until closed by user, OR closed here?
+                        // User said: "ne se rouvrir qu'une fois re rentrer dans leurs perimetre mais pas avant de l'avoir quitter"
+                        // So UI logic is handled by this state check preventing rapid re-open.
+                    }
                 }
             }
         }
