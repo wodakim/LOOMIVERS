@@ -27,6 +27,38 @@ export class MapGenerator {
         return this.grid;
     }
 
+    // Place Crates
+    placeDestructibles(entityManager) {
+        // Simple scan: if floor has > 5 free neighbors, 5% chance to place crate
+        // We need component classes imported? Or pass a factory?
+        // MapGenerator should just return a list of destructibles OR we pass entityManager to it?
+        // Let's return a list of {x, y, type} for Main.js to spawn
+
+        const objects = [];
+        for (let y = 1; y < this.rows - 1; y++) {
+            for (let x = 1; x < this.cols - 1; x++) {
+                if (this.grid[y][x] === 0) {
+                    // Check neighbors
+                    let floorNeighbors = 0;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (this.grid[y+dy][x+dx] === 0) floorNeighbors++;
+                        }
+                    }
+
+                    if (floorNeighbors >= 8 && Math.random() < 0.02) {
+                        objects.push({
+                            x: x * this.tileSize + this.tileSize/2,
+                            y: y * this.tileSize + this.tileSize/2,
+                            type: 'crate'
+                        });
+                    }
+                }
+            }
+        }
+        return objects;
+    }
+
     initializeGrid() {
         this.grid = [];
         for (let y = 0; y < this.rows; y++) {

@@ -301,6 +301,10 @@ export class WaveManager {
         // Apply Difficulty Multiplier
         const mult = this.difficultyMultiplier;
 
+        // Elite Chance (1%)
+        let isElite = Math.random() < 0.01;
+        if (type === 'boss1') isElite = false; // Boss is boss
+
         if (type === 'tier1') {
             v.speed = 80 + Math.random() * 40;
             h.current = h.max = 50 * mult;
@@ -417,6 +421,25 @@ export class WaveManager {
             r.shape = 'rect'; // distinct
 
             ai.behavior = 'kamikaze';
+        }
+
+        // Apply Elite Modifiers
+        if (isElite) {
+            enemy.tags.add('elite');
+            h.max *= 5;
+            h.current = h.max;
+            s.value *= 10;
+
+            const r = enemy.getComponent('RenderComponent');
+            const c = enemy.getComponent('ColliderComponent');
+
+            r.width *= 1.5;
+            r.height *= 1.5;
+            c.radius *= 1.5;
+
+            // Visual tint handled by RenderSystem? Or force red
+            r.color = '#ff0000'; // Force red tint
+            // Ideally use filter in RenderSystem, but color override is simple
         }
     }
 }

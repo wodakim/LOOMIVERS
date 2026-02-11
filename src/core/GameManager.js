@@ -42,6 +42,7 @@ export class GameManager {
         // Buttons
         this.initButtons();
         this.initInput();
+        this.initWindowEvents();
 
         // Wardrobe listeners
         this.initWardrobe();
@@ -126,6 +127,14 @@ export class GameManager {
                 btn.addEventListener('click', () => {
                     this.buyUpgrade(key);
                 });
+            }
+        });
+    }
+
+    initWindowEvents() {
+        window.addEventListener('blur', () => {
+            if (this.state === GameState.PLAYING) {
+                this.togglePause();
             }
         });
     }

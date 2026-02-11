@@ -118,6 +118,11 @@ export class RenderSystem extends System {
                 this.drawEntity(transform, render, sprite, render.color, false);
                 this.ctx.restore();
             }
+
+            // Draw Health Bar for Elites/Bosses
+            if (entity.tags.has('elite') || entity.hasComponent('BossComponent')) {
+                this.drawHealthBar(entity, transform, render.width);
+            }
         }
 
         // 3b. Draw Floating Texts
@@ -263,6 +268,23 @@ export class RenderSystem extends System {
             this.ctx.translate(-transform.x, -transform.y);
         }
         this.ctx.restore();
+    }
+
+    drawHealthBar(entity, transform, width) {
+        if (!entity.hasComponent('HealthComponent')) return;
+        const h = entity.getComponent('HealthComponent');
+        if (h.current >= h.max) return; // Hide if full health
+
+        const barW = width;
+        const barH = 4;
+        const yOffset = -20; // Above entity
+
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(transform.x - barW/2, transform.y + yOffset, barW, barH);
+
+        const pct = Math.max(0, h.current / h.max);
+        this.ctx.fillStyle = '#f00';
+        this.ctx.fillRect(transform.x - barW/2, transform.y + yOffset, barW * pct, barH);
     }
 
     drawFPS() {

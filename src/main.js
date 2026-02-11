@@ -41,6 +41,7 @@ import { ElementalComponent } from './components/ElementalComponents.js';
 import { WaveManager } from './core/WaveManager.js';
 import { GameManager, GameState } from './core/GameManager.js';
 import { UpgradeManager } from './core/UpgradeManager.js';
+import { NotificationSystem } from './core/NotificationSystem.js';
 import { TraitSystem } from './systems/TraitSystem.js';
 import { WeaponTypes } from './data/WeaponTypes.js';
 import { AssetSources, Animations } from './data/AssetManifest.js';
@@ -62,6 +63,7 @@ class Game {
         this.saveSystem.initIntegritySalt();
         this.upgradeManager = new UpgradeManager(this.saveSystem);
         this.audioSystem = new AudioSystem();
+        this.notificationSystem = new NotificationSystem();
 
         // Game Manager (State Machine)
         this.playerColor = '#00ccff'; // Default
@@ -152,7 +154,41 @@ class Game {
         // Reset Terraformation Zones
         this.terraformationSystem.zones = [];
 
+        // Spawn Destructibles (Crates)
+        const props = mapGen.placeDestructibles();
+        for(const prop of props) {
+            this.createCrate(prop.x, prop.y);
+        }
+
         this.createPlayer(true, spawn.x, spawn.y);
+    }
+
+    createCrate(x, y) {
+        const crate = this.entityManager.createEntity();
+        crate.tags.add('destructible');
+
+        crate.addComponent(new TransformComponent());
+        const t = crate.getComponent('TransformComponent');
+        t.x = x;
+        t.y = y;
+
+        crate.addComponent(new RenderComponent());
+        const r = crate.getComponent('RenderComponent');
+        r.color = '#8b4513'; // Brown
+        r.shape = 'rect';
+        r.width = 40;
+        r.height = 40;
+        r.layer = 4; // Below enemies
+
+        crate.addComponent(new ColliderComponent());
+        const c = crate.getComponent('ColliderComponent');
+        c.width = 40;
+        c.height = 40;
+        c.tags = ['enemy', 'player']; // Blocks movement
+
+        crate.addComponent(new HealthComponent());
+        const h = crate.getComponent('HealthComponent');
+        h.current = h.max = 20;
     }
 
     // Called for HUB

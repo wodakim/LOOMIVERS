@@ -57,6 +57,10 @@ export class TraitSystem {
         // Store Mods in WeaponComponent for CombatSystem/DamageSystem to use
         if (!weapon.mods) weapon.mods = new Set();
 
+        // Evolve check logic could be here, but simpler to just stack mods.
+        // V3: Evolution?
+        // If weapon level max? We don't track weapon level explicitly in component yet, just traits.
+
         if (id === 'multishot') {
             weapon.projectileCount = (weapon.projectileCount || 1) + 1;
         } else if (id === 'inferno_trail') {
