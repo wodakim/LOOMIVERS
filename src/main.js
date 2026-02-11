@@ -260,7 +260,8 @@ class Game {
             const weapon = hero.getComponent('WeaponComponent');
             weapon.fireRate = 1.5;
             weapon.damage = 15;
-            weapon.range = 400;
+            weapon.range = 1200; // Increased from 400
+            weapon.projectileSpeed = 900; // Faster bullets
 
             hero.addComponent(new ElementalComponent());
             hero.getComponent('ElementalComponent').tags.add('fire');

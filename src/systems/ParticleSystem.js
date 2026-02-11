@@ -69,4 +69,39 @@ export class ParticleSystem extends System {
             r.layer = isBlood ? 15 : 20; // Blood slightly lower than entities
         }
     }
+
+    emitBurst(x, y, count, color = '#ffaa00') {
+        // Explosion Burst
+        for (let i = 0; i < count; i++) {
+            const p = this.entityManager.createEntity();
+
+            p.addComponent(new TransformComponent());
+            const t = p.getComponent('TransformComponent');
+            t.x = x;
+            t.y = y;
+
+            p.addComponent(new VelocityComponent());
+            const v = p.getComponent('VelocityComponent');
+            const angle = Math.random() * Math.PI * 2;
+            const s = 100 + Math.random() * 200;
+            v.vx = Math.cos(angle) * s;
+            v.vy = Math.sin(angle) * s;
+            v.drag = 2.0;
+
+            p.addComponent(new ParticleComponent());
+            const pc = p.getComponent('ParticleComponent');
+            pc.color = color;
+            pc.lifetime = 0.2 + Math.random() * 0.3;
+            pc.maxLifetime = pc.lifetime;
+            pc.size = 4 + Math.random() * 4;
+
+            p.addComponent(new RenderComponent());
+            const r = p.getComponent('RenderComponent');
+            r.color = color;
+            r.shape = 'rect';
+            r.width = pc.size;
+            r.height = pc.size;
+            r.layer = 21;
+        }
+    }
 }

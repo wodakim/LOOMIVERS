@@ -248,7 +248,9 @@ export class DamageSystem extends System {
         if (this.particleSystem) {
              const t = target.getComponent('TransformComponent');
              const color = target.getComponent('RenderComponent') ? target.getComponent('RenderComponent').color : '#fff';
-             this.particleSystem.emit(t.x, t.y, 5, color);
+             // Spark Burst on Hit
+             this.particleSystem.emitBurst(t.x, t.y, 3, '#ffff00');
+             this.particleSystem.emit(t.x, t.y, 3, color);
         }
 
         if (health.current <= 0 && !health.isDead) {

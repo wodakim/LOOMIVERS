@@ -264,14 +264,21 @@ export class GameManager {
     }
 
     openShop() {
+        this.previousState = this.state; // Remember where we came from (Menu or Hub)
         this.state = GameState.SHOP;
         this.updateShopUI();
         this.showScreen(this.shopScreen);
     }
 
     closeShop() {
-        this.state = GameState.MENU;
-        this.showScreen(this.menuScreen);
+        if (this.previousState === GameState.HUB) {
+            this.state = GameState.HUB;
+            this.hideAllScreens();
+            this.game.gameLoop.start(); // Ensure loop running
+        } else {
+            this.state = GameState.MENU;
+            this.showScreen(this.menuScreen);
+        }
     }
 
     showOptions(fromState) {
