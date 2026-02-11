@@ -49,9 +49,6 @@ export class Entity {
 
         for (const component of this.components.values()) {
             if (component.reset) component.reset();
-            // Note: On pourrait aussi retourner les composants à leur propre pool ici
-            // Pour cette version, on garde les instances de composants attachées ou on les laisse au GC si on remplace
-            // Optimisation future: Pool de composants spécifique.
         }
         this.components.clear();
     }

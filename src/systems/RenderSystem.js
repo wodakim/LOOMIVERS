@@ -235,16 +235,32 @@ export class RenderSystem extends System {
 
             this.ctx.globalAlpha = Math.max(0, ft.lifetime);
 
+            // Dynamic scaling (Pop effect)
+            const age = 1.0 - ft.lifetime; // Age from 0 to 1 (if lifetime is 1.0) usually lifetime decreases
+            // Assuming max lifetime is around 1.0. If lifetime starts at 1.5, we normalize?
+            // Let's scale based on remaining lifetime to simplify.
+            // Pop up at start:
+            let scale = 1.0;
+            if (ft.lifetime > 0.8) {
+                scale = 1.0 + (ft.lifetime - 0.8) * 2; // Pop
+            }
+
+            this.ctx.translate(transform.x, transform.y);
+            this.ctx.scale(scale, scale);
+
             if (ft.isCritical) {
-                this.ctx.font = 'bold 24px Arial'; // Plus gros
-                this.ctx.fillStyle = '#ff0000';    // Rouge vif
+                this.ctx.font = 'bold 24px Arial';
+                this.ctx.fillStyle = '#ff0000';
             } else {
                 this.ctx.font = 'bold 14px Arial';
                 this.ctx.fillStyle = '#ffffff';
             }
 
-            this.ctx.strokeText(ft.text, transform.x, transform.y);
-            this.ctx.fillText(ft.text, transform.x, transform.y);
+            this.ctx.strokeText(ft.text, 0, 0);
+            this.ctx.fillText(ft.text, 0, 0);
+
+            this.ctx.scale(1/scale, 1/scale);
+            this.ctx.translate(-transform.x, -transform.y);
         }
         this.ctx.restore();
     }

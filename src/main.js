@@ -91,6 +91,7 @@ class Game {
         this.movementSystem = new MovementSystem(this.entityManager, this.canvas.width, this.canvas.height);
         this.particleSystem = new ParticleSystem(this.entityManager);
         this.terraformationSystem = new TerraformationSystem(this.entityManager, this.canvas.width, this.canvas.height);
+        this.particleSystem.setTerraformationSystem(this.terraformationSystem); // Inject dependency
         this.alchemySystem = new AlchemySystem(this.entityManager, this.terraformationSystem, this.particleSystem, this.audioSystem);
         this.progressionSystem = new ProgressionSystem(this.entityManager, this.physicsSystem, this.audioSystem);
         this.traitSystem = new TraitSystem(this.entityManager, this.progressionSystem);

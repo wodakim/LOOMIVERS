@@ -46,6 +46,12 @@ export class GameManager {
         // Wardrobe listeners
         this.initWardrobe();
 
+        // Load Player Color
+        const data = this.game.saveSystem.load();
+        if (data && data.playerColor) {
+            this.game.playerColor = data.playerColor;
+        }
+
         // Initial State
         this.showScreen(this.menuScreen);
     }
@@ -136,6 +142,18 @@ export class GameManager {
 
     setPlayerColor(color) {
         this.game.playerColor = color;
+        // Update current player entity if exists
+        const player = this.game.entityManager.getEntities().find(e => e.tags.has('player'));
+        if (player) {
+            const render = player.getComponent('RenderComponent');
+            if (render) {
+                render.color = color;
+            }
+        }
+        // Save choice
+        const data = this.game.saveSystem.load() || {};
+        data.playerColor = color;
+        this.game.saveSystem.save(data);
     }
 
     initInput() {

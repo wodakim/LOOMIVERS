@@ -45,14 +45,48 @@ export class TerraformationSystem extends System {
      * @param {string} type - 'fire' | 'water' | 'crater' | 'oil' | 'electrified_water'
      */
     addZone(x, y, radius, type) {
-        // 2. Logique (Stockage pour collisions rapides)
-        // Check duplication?
         this.zones.push({ x, y, radius, type });
-        this.redrawZones(); // Brute force redraw for POC
+        this.redrawZones(); // Simple POC redraw
+    }
+
+    addStain(x, y, size, color) {
+        // Stains are purely visual and permanent (until resize/reset)
+        // We draw them immediately on the canvas and DON'T store them in 'zones' logic list
+        // because they don't have gameplay effects (collisions).
+        // BUT redrawZones clears the canvas. So we need a way to persist them.
+
+        // Option 1: Separate canvas for stains.
+        // Option 2: Store stains in a list and redraw (expensive).
+        // Option 3: Don't clear stains in redrawZones? But redrawZones is needed for dynamic zones moving/changing?
+        // Actually, zones are static mostly. But 'fire' might flicker?
+        // Let's store stains in a separate list.
+        if (!this.stains) this.stains = [];
+        this.stains.push({x, y, size, color, rotation: Math.random() * Math.PI});
+
+        // Optimize: Limit stain count
+        if (this.stains.length > 500) this.stains.shift();
+
+        this.redrawZones();
     }
 
     redrawZones() {
         this.ctx.clearRect(0, 0, this.width, this.height);
+
+        // Draw Stains first (bottom layer)
+        if (this.stains) {
+            for (const stain of this.stains) {
+                this.ctx.save();
+                this.ctx.translate(stain.x, stain.y);
+                this.ctx.rotate(stain.rotation);
+                this.ctx.fillStyle = stain.color;
+                this.ctx.globalAlpha = 0.6;
+                // Splat shape
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, stain.size, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+            }
+        }
 
         for (const zone of this.zones) {
             this.ctx.save();

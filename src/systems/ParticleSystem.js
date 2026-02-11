@@ -5,6 +5,11 @@ import { ParticleComponent } from '../components/ParticleComponent.js';
 export class ParticleSystem extends System {
     constructor(entityManager) {
         super(entityManager);
+        this.terraformationSystem = null; // Injected
+    }
+
+    setTerraformationSystem(ts) {
+        this.terraformationSystem = ts;
     }
 
     update(dt) {
@@ -16,16 +21,19 @@ export class ParticleSystem extends System {
                 particle.lifetime -= dt;
 
                 if (particle.lifetime <= 0) {
+                    // Blood Stain Logic
+                    if (particle.isBlood && this.terraformationSystem) {
+                        const t = entity.getComponent('TransformComponent');
+                        const r = entity.getComponent('RenderComponent');
+                        this.terraformationSystem.addStain(t.x, t.y, r.width, r.color);
+                    }
                     this.entityManager.removeEntity(entity);
-                } else {
-                    // Update scale or opacity if needed logic is here
-                    // RenderSystem will handle the drawing based on lifetime
                 }
             }
         }
     }
 
-    emit(x, y, count, color = '#fff', speed = 100) {
+    emit(x, y, count, color = '#fff', speed = 100, isBlood = false) {
         for (let i = 0; i < count; i++) {
             const p = this.entityManager.createEntity();
 
@@ -40,24 +48,25 @@ export class ParticleSystem extends System {
             const s = Math.random() * speed;
             v.vx = Math.cos(angle) * s;
             v.vy = Math.sin(angle) * s;
-            v.drag = 0.5; // Ralentissement rapide
+            // Higher drag for blood to stop near body
+            // Since MovementSystem applies drag = 5.0 * dt, we don't need v.drag unless we implement per-entity drag
+            // Let's assume global drag handles it, or set high speed and let it decay
 
             p.addComponent(new ParticleComponent());
             const pc = p.getComponent('ParticleComponent');
             pc.color = color;
-            pc.lifetime = 0.5 + Math.random() * 0.5;
+            pc.lifetime = 0.3 + Math.random() * 0.4;
             pc.maxLifetime = pc.lifetime;
-            pc.size = 2 + Math.random() * 3;
+            pc.size = isBlood ? 4 + Math.random() * 6 : 2 + Math.random() * 3;
+            pc.isBlood = isBlood;
 
-            // On n'ajoute pas de RenderComponent standard, car le rendu des particules est souvent spécifique.
-            // MAIS pour simplifier et rester dans l'ECS générique :
             p.addComponent(new RenderComponent());
             const r = p.getComponent('RenderComponent');
             r.color = color;
-            r.shape = 'rect';
+            r.shape = isBlood ? 'circle' : 'rect';
             r.width = pc.size;
             r.height = pc.size;
-            r.layer = 20;
+            r.layer = isBlood ? 15 : 20; // Blood slightly lower than entities
         }
     }
 }

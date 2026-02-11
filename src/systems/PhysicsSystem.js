@@ -29,6 +29,8 @@ export class PhysicsSystem extends System {
         const entities = this.entityManager.getEntities();
 
         for (const entity of entities) {
+            if (!entity.active) continue; // Skip dead entities
+
             if (entity.hasComponent('ColliderComponent') && entity.hasComponent('TransformComponent')) {
                 const transform = entity.getComponent('TransformComponent');
 
@@ -46,8 +48,8 @@ export class PhysicsSystem extends System {
 
         // 2. Check Entity vs Map Collisions
         if (this.mapGrid) {
-            const entities = this.entityManager.getEntities();
             for (const entity of entities) {
+                if (!entity.active) continue;
                 if (entity.hasComponent('ColliderComponent') && entity.hasComponent('TransformComponent')) {
                     this.resolveMapCollision(entity);
                 }

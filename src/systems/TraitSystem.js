@@ -59,6 +59,11 @@ export class TraitSystem {
 
         if (id === 'multishot') {
             weapon.projectileCount = (weapon.projectileCount || 1) + 1;
+        } else if (id === 'inferno_trail') {
+            // Add Dash Mod or persistent effect
+            // For now, assume MovementSystem or AlchemySystem handles it if we tag player
+            if (!player.mods) player.mods = new Set();
+            player.mods.add('inferno_trail');
         } else {
             // Mods like bounce, pierce, explosive are flags checked later
             weapon.mods.add(id);
@@ -68,6 +73,25 @@ export class TraitSystem {
     getAvailableOptions() {
         const options = [];
         const keys = Object.keys(Traits);
+
+        // Find Synergies
+        const player = this.entityManager.getEntities().find(e => e.tags.has('player'));
+        let synergy = null;
+        if (player) {
+            // Check Conditions for Inferno Trail
+            // Assumption: Player has ElementalComponent with tags
+            const elem = player.getComponent('ElementalComponent');
+            if (elem && elem.tags.has('fire') && elem.tags.has('oil')) {
+                if (!this.activeTraits['inferno_trail']) {
+                    synergy = 'inferno_trail';
+                }
+            }
+        }
+
+        // Force synergy if available (High priority)
+        if (synergy) {
+            options.push({ id: synergy, ...Traits[synergy] });
+        }
 
         // Pick 3 random valid options
         for(let i=0; i<3; i++) {

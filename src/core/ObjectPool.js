@@ -37,6 +37,7 @@ export class ObjectPool {
         if (obj.reset) {
             obj.reset();
         }
+        // Ensure object is clean
         this.pool.push(obj);
     }
 }

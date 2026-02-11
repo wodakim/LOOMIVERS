@@ -54,6 +54,30 @@ export class MovementSystem extends System {
                 transform.x += vx * dt;
                 transform.y += vy * dt;
 
+                // Inferno Trail Synergy
+                if (entity.mods && entity.mods.has('inferno_trail')) {
+                    // Spawn fire zone occasionally
+                    if (Math.random() < 0.1) {
+                        // We need access to TerraformationSystem.
+                        // Can't easily access from here without refactoring.
+                        // Skip for now, or use global window.game (hack)
+                        if (window.game && window.game.terraformationSystem) {
+                            window.game.terraformationSystem.addZone(transform.x, transform.y, 20, 'fire');
+                        }
+                    }
+                }
+
+                // Friction / Drag (For Knockback Decay)
+                // If velocity is higher than base speed, decay it
+                // Simple linear drag for everything to stabilize knockback
+                const drag = 5.0 * dt; // 500% per second decay
+                velocity.vx -= velocity.vx * drag;
+                velocity.vy -= velocity.vy * drag;
+
+                // Stop if very small
+                if (Math.abs(velocity.vx) < 0.1) velocity.vx = 0;
+                if (Math.abs(velocity.vy) < 0.1) velocity.vy = 0;
+
                 // Boundary Check
                 if (transform.x < 0) transform.x = 0;
                 if (transform.y < 0) transform.y = 0;

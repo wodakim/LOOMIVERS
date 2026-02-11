@@ -51,5 +51,14 @@ export const Traits = {
         maxLevel: 3,
         rarity: 'common',
         type: 'stat'
+    },
+
+    // Synergies
+    'inferno_trail': {
+        name: 'Inferno Trail',
+        desc: 'Walking leaves a trail of fire. Requires Fire + Oil.',
+        maxLevel: 1,
+        rarity: 'legendary',
+        type: 'synergy'
     }
 };

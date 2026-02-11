@@ -141,6 +141,7 @@ export class DamageSystem extends System {
         const projectileTransform = projectileEntity.getComponent('TransformComponent');
         const projectileCollider = projectileEntity.getComponent('ColliderComponent');
         const projectileData = projectileEntity.getComponent('ProjectileComponent');
+        const projectileVelocity = projectileEntity.getComponent('VelocityComponent');
 
         const col = Math.floor(projectileTransform.x / this.physicsSystem.cellSize);
         const row = Math.floor(projectileTransform.y / this.physicsSystem.cellSize);
@@ -200,7 +201,14 @@ export class DamageSystem extends System {
                     const isCrit = Math.random() < 0.1; // 10% Chance
                     const finalDamage = isCrit ? projectileData.damage * 2 : projectileData.damage;
 
-                    this.applyDamage(target, finalDamage, isCrit);
+                    // Knockback Vector
+                    let knockback = { x: 0, y: 0 };
+                    if (projectileVelocity) {
+                        knockback.x = projectileVelocity.vx * 0.5; // Transfer momentum
+                        knockback.y = projectileVelocity.vy * 0.5;
+                    }
+
+                    this.applyDamage(target, finalDamage, isCrit, knockback);
 
                     if (this.alchemySystem) {
                         this.alchemySystem.onProjectileHit(projectileEntity, target);
@@ -212,9 +220,16 @@ export class DamageSystem extends System {
         }
     }
 
-    applyDamage(target, amount, isCrit = false) {
+    applyDamage(target, amount, isCrit = false, knockback = null) {
         const health = target.getComponent('HealthComponent');
         health.current -= amount;
+
+        // Knockback (Impulse)
+        if (target.hasComponent('VelocityComponent') && knockback) {
+            const v = target.getComponent('VelocityComponent');
+            v.vx += knockback.x;
+            v.vy += knockback.y;
+        }
 
         // Hit Flash Effect
         if (target.hasComponent('RenderComponent')) {
@@ -240,6 +255,11 @@ export class DamageSystem extends System {
             health.isDead = true;
             if (this.audioSystem) {
                 this.audioSystem.playTone(100, 'sawtooth', 0.1, 0.3);
+            }
+            // Spawn Blood on Death
+            if (this.particleSystem) {
+                const t = target.getComponent('TransformComponent');
+                this.particleSystem.emit(t.x, t.y, 10, '#880000', 150, true);
             }
             this.killEntity(target);
         }

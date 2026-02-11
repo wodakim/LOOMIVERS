@@ -19,6 +19,12 @@ export class EntityManager {
      */
     createEntity() {
         const entity = this.entityPool.acquire();
+        // Force clean in case pool failed or user logic failed
+        if (entity.components.size > 0) {
+            console.warn("EntityManager: Acquired dirty entity! Resetting.");
+            entity.reset();
+        }
+
         entity.id = this.nextId++;
         entity.active = true;
         this.entities.push(entity);

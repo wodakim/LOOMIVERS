@@ -204,7 +204,7 @@ export class AISystem extends System {
         const separationForce = this.calculateSeparation(entity, transform);
 
         const chaseWeight = 1.0;
-        const separationWeight = 2.0;
+        const separationWeight = 2.0; // Strong separation
 
         let finalDx = (dirX * chaseWeight) + (separationForce.x * separationWeight);
         let finalDy = (dirY * chaseWeight) + (separationForce.y * separationWeight);
@@ -356,7 +356,7 @@ export class AISystem extends System {
         if (this.physicsSystem) {
             const neighbors = this.getNeighbors(entity, transform);
             let separationCount = 0;
-            const separationRadius = 30;
+            const separationRadius = 40; // Increased radius
 
             for (const neighbor of neighbors) {
                 if (neighbor === entity) continue;
@@ -369,6 +369,7 @@ export class AISystem extends System {
 
                 if (ndistSq > 0 && ndistSq < separationRadius * separationRadius) {
                     const ndist = Math.sqrt(ndistSq);
+                    // Inverse proportional to distance
                     const strength = (separationRadius - ndist) / separationRadius;
                     separationForce.x += (ndx / ndist) * strength;
                     separationForce.y += (ndy / ndist) * strength;
@@ -377,8 +378,12 @@ export class AISystem extends System {
             }
 
             if (separationCount > 0) {
-                separationForce.x /= separationCount;
-                separationForce.y /= separationCount;
+                // Normalize
+                const len = Math.sqrt(separationForce.x*separationForce.x + separationForce.y*separationForce.y);
+                if (len > 0) {
+                    separationForce.x /= len;
+                    separationForce.y /= len;
+                }
             }
         }
         return separationForce;
